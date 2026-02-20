@@ -1,3 +1,47 @@
 spring:
   application:
     name: discord-like
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/discord_like
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: "false"
+    consumer:
+      group-id: discord-like
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.luishbarros.discord_like.*"
+
+server:
+  port: 8000
+
+jwt:
+  access-secret: ${JWT_ACCESS_SECRET:your-256-bit-secret-key-for-access-tokens-here}
+  refresh-secret: ${JWT_REFRESH_SECRET:your-256-bit-secret-key-for-refresh-tokens-here}
+  access-expiration-ms: 900000      # 15 minutes
+  refresh-expiration-ms: 604800000  # 7 days
