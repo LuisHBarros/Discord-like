@@ -8,7 +8,7 @@ import com.luishbarros.discord_like.modules.chat.domain.event.InviteEvents;
 import com.luishbarros.discord_like.modules.chat.domain.event.RoomEvents;
 import com.luishbarros.discord_like.modules.chat.domain.model.Invite;
 import com.luishbarros.discord_like.modules.chat.domain.model.Room;
-import com.luishbarros.discord_like.modules.chat.domain.ports.EventPublisher;
+import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import com.luishbarros.discord_like.modules.chat.domain.ports.repository.InviteRepository;
 import com.luishbarros.discord_like.modules.chat.domain.ports.repository.RoomRepository;
 import com.luishbarros.discord_like.modules.chat.domain.service.RoomMembershipValidator;
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -42,7 +41,7 @@ public class InviteService {
         this.eventPublisher = eventPublisher;
     }
 
-    public Invite generateInvite(UUID roomId, UUID userId, Instant now) {
+    public Invite generateInvite(Long roomId, Long userId, Instant now) {
         membershipValidator.validateAndGetRoom(roomId, userId);
 
         Invite invite = inviteFactory.create(roomId, userId, now);
@@ -53,7 +52,7 @@ public class InviteService {
         return invite;
     }
 
-    public void acceptInvite(String inviteCodeValue, UUID userId, Instant now) {
+    public void acceptInvite(String inviteCodeValue, Long userId, Instant now) {
         Invite invite = inviteRepository.findByCode(inviteCodeValue)
                 .orElseThrow(() -> new InvalidInviteCodeError("Invite code not found"));
 
@@ -71,7 +70,7 @@ public class InviteService {
         eventPublisher.publish(InviteEvents.accepted(invite, userId));
     }
 
-    public void revokeInvite(UUID roomId, UUID userId, UUID inviteId) {
+    public void revokeInvite(Long roomId, Long userId, Long inviteId) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         validateOwnership(room, userId);
 
@@ -86,7 +85,7 @@ public class InviteService {
         eventPublisher.publish(InviteEvents.revoked(invite));
     }
 
-    private void validateOwnership(Room room, UUID userId) {
+    private void validateOwnership(Room room, Long userId) {
         if (!room.isOwner(userId)) {
             throw new ForbiddenError("Only room owner can revoke invites");
         }

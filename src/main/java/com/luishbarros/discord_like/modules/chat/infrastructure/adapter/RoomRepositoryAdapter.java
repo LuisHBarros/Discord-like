@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class RoomRepositoryAdapter implements RoomRepository {
@@ -27,7 +26,7 @@ public class RoomRepositoryAdapter implements RoomRepository {
     }
 
     @Override
-    public Optional<Room> findById(UUID id) {
+    public Optional<Room> findById(Long id) {
         return jpaRepository.findById(id)
                 .map(RoomJpaEntity::toDomain);
     }
@@ -39,19 +38,19 @@ public class RoomRepositoryAdapter implements RoomRepository {
     }
 
     @Override
-    public List<Room> findByMemberId(UUID memberId) {
+    public List<Room> findByMemberId(Long memberId) {
         return jpaRepository.findByMemberId(memberId).stream()
                 .map(RoomJpaEntity::toDomain)
                 .toList();
     }
 
     @Override
-    public void deleteById(UUID id) {
+    public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }
 
     @Override
-    public boolean existsById(UUID id) {
+    public boolean existsById(Long id) {
         return jpaRepository.existsById(id);
     }
 }

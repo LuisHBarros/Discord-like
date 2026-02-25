@@ -6,17 +6,17 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record RoomEvents(
-        UUID roomId,
-        UUID userId,
+        Long roomId,
+        Long userId,
         Instant occurredAt,
         EventType type
 ) {
-
     public enum EventType {
         ROOM_CREATED,
         MEMBER_JOINED,
         MEMBER_LEFT,
-        ROOM_UPDATED
+        ROOM_UPDATED,
+        ROOM_DELETED
     }
 
     public static RoomEvents roomCreated(Room room, Instant occurredAt) {
@@ -28,7 +28,7 @@ public record RoomEvents(
         );
     }
 
-    public static RoomEvents memberJoined(UUID roomId, UUID userId, Instant occurredAt) {
+    public static RoomEvents memberJoined(Long roomId, Long userId, Instant occurredAt) {
         return new RoomEvents(
                 roomId,
                 userId,
@@ -37,7 +37,7 @@ public record RoomEvents(
         );
     }
 
-    public static RoomEvents memberLeft(UUID roomId, UUID userId, Instant occurredAt) {
+    public static RoomEvents memberLeft(Long roomId, Long userId, Instant occurredAt) {
         return new RoomEvents(
                 roomId,
                 userId,
@@ -45,12 +45,20 @@ public record RoomEvents(
                 EventType.MEMBER_LEFT
         );
     }
-    public static RoomEvents roomUpdated(UUID roomId, UUID userId, Instant occurredAt){
+    public static RoomEvents roomUpdated(Long roomId, Long userId, Instant occurredAt){
         return new RoomEvents(
                 roomId,
                 userId,
                 occurredAt,
                 EventType.ROOM_UPDATED
+        );
+    }
+    public static RoomEvents roomDeleted(Long roomId, Long userId, Instant occurredAt) {
+        return new RoomEvents(
+                roomId,
+                userId,
+                occurredAt,
+                EventType.ROOM_DELETED
         );
     }
 }

@@ -9,7 +9,7 @@ public interface InviteRepository {
     void save(Invite invite);
 
     Optional<Invite> findByCode(String inviteCodeValue);
-    Optional<Invite> findById(UUID inviteId);
+    Optional<Invite> findById(Long inviteId);
 
     void delete(Invite invite);
 }

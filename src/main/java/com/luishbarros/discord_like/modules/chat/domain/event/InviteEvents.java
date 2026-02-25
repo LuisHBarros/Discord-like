@@ -3,16 +3,15 @@ package com.luishbarros.discord_like.modules.chat.domain.event;
 import com.luishbarros.discord_like.modules.chat.domain.model.Invite;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record InviteEvents(
-        UUID inviteId,
-        UUID roomId,
-        UUID createdByUserId,
+        Long inviteId,
+        Long roomId,
+        Long createdByUserId,
         String inviteCode,
         Instant createdAt,
         Instant expiresAt,
-        UUID acceptedByUserId,
+        Long acceptedByUserId,
         EventType type
 ) {
 
@@ -35,7 +34,7 @@ public record InviteEvents(
         );
     }
 
-    public static InviteEvents accepted(Invite invite, UUID userId) {
+    public static InviteEvents accepted(Invite invite, Long userId) {
         return new InviteEvents(
                 invite.getId(),
                 invite.getRoomId(),

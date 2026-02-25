@@ -6,6 +6,7 @@ import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.Ou
 import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.ErrorResponse;
 import com.luishbarros.discord_like.modules.chat.application.service.MessageService;
 import com.luishbarros.discord_like.modules.chat.domain.model.Message;
+import com.luishbarros.discord_like.shared.ports.PresenceStore;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -14,7 +15,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.UUID;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
@@ -22,15 +22,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final MessageService messageService;
     private final ObjectMapper objectMapper;
     private final WebSocketSessionManager sessionManager;
+    private final PresenceStore presenceStore;
+    private static final String ID = "user_id";
 
     public ChatWebSocketHandler(
             MessageService messageService,
             ObjectMapper objectMapper,
-            WebSocketSessionManager sessionManager
+            WebSocketSessionManager sessionManager,
+            PresenceStore presenceStore
     ) {
         this.messageService = messageService;
         this.objectMapper = objectMapper;
         this.sessionManager = sessionManager;
+        this.presenceStore = presenceStore;
     }
 
     @Override
@@ -38,9 +42,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessionManager.register(session);
 
         // Extract user info from headers
-        UUID userId = extractUserId(session);
-        session.getAttributes().put("userId", userId);
-
+        Long userId = extractUserId(session);
+        session.getAttributes().put(ID, userId);
+        presenceStore.setOnline(userId);
         sendConnectMessage(session, "Connected to chat server");
     }
 
@@ -63,11 +67,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws IOException {
+        Long userId = (Long) session.getAttributes().get(ID);
+        if (userId != null) {
+            presenceStore.setOffline(userId);
+        }
         sessionManager.unregister(session);
     }
 
     private void handleChatMessage(WebSocketSession session, IncomingMessage payload) throws IOException {
-        UUID userId = (UUID) session.getAttributes().get("userId");
+        Long userId = (Long) session.getAttributes().get(ID);
 
         if (!userId.equals(payload.senderId())) {
             sendError(session, "unauthorized");
@@ -95,12 +103,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         );
     }
 
-    private void handleJoinRoom(WebSocketSession session, UUID roomId) throws IOException {
+    private void handleJoinRoom(WebSocketSession session, Long roomId) throws IOException {
         sessionManager.joinRoom(roomId.toString(), session);
         sendConnectMessage(session, "Joined room: " + roomId);
     }
 
-    private void handleLeaveRoom(WebSocketSession session, UUID roomId) throws IOException {
+    private void handleLeaveRoom(WebSocketSession session, Long roomId) throws IOException {
         sessionManager.leaveRoom(roomId.toString(), session);
         sendConnectMessage(session, "Left room: " + roomId);
     }
@@ -117,11 +125,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         ));
     }
 
-    private UUID extractUserId(WebSocketSession session) {
+    private Long extractUserId(WebSocketSession session) {
         if (session.getPrincipal() == null) {
             throw new IllegalStateException("Unauthenticated WebSocket connection");
         }
-        return UUID.fromString(session.getPrincipal().getName());
+        return (Long) session.getAttributes().get("userId");
     }
 
 }

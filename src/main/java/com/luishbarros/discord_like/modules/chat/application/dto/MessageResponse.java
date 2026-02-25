@@ -3,12 +3,11 @@ package com.luishbarros.discord_like.modules.chat.application.dto;
 import com.luishbarros.discord_like.modules.chat.domain.model.Message;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record MessageResponse(
-        UUID id,
-        UUID roomId,
-        UUID senderId,
+        Long id,
+        Long roomId,
+        Long senderId,
         String content,
         Instant createdAt,
         Instant editedAt,

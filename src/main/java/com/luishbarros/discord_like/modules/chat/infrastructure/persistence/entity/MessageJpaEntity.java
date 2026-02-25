@@ -2,7 +2,6 @@ package com.luishbarros.discord_like.modules.chat.infrastructure.persistence.ent
 
 import jakarta.persistence.*;
 import java.time.Instant;
-import java.util.UUID;
 
 @Entity
 @Table(name = "messages")
@@ -10,13 +9,13 @@ public class MessageJpaEntity {
 
     @Id
     @Column(name = "id")
-    private UUID id;
+    private Long id;
 
     @Column(name = "sender_id", nullable = false)
-    private UUID senderId;
+    private Long senderId;
 
     @Column(name = "room_id", nullable = false)
-    private UUID roomId;
+    private Long roomId;
 
     @Column(name = "ciphertext", nullable = false, columnDefinition = "TEXT")
     private String ciphertext;
@@ -29,7 +28,7 @@ public class MessageJpaEntity {
 
     protected MessageJpaEntity() {}
 
-    public MessageJpaEntity(UUID id, UUID senderId, UUID roomId, String ciphertext, Instant createdAt, Instant editedAt) {
+    public MessageJpaEntity(Long id, Long senderId, Long roomId, String ciphertext, Instant createdAt, Instant editedAt) {
         this.id = id;
         this.senderId = senderId;
         this.roomId = roomId;
@@ -38,9 +37,9 @@ public class MessageJpaEntity {
         this.editedAt = editedAt;
     }
 
-    public UUID getId() { return id; }
-    public UUID getSenderId() { return senderId; }
-    public UUID getRoomId() { return roomId; }
+    public Long getId() { return id; }
+    public Long getSenderId() { return senderId; }
+    public Long getRoomId() { return roomId; }
     public String getCiphertext() { return ciphertext; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getEditedAt() { return editedAt; }

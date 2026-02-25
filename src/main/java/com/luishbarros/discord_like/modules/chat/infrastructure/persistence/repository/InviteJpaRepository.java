@@ -8,6 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface InviteJpaRepository extends JpaRepository<InviteJpaEntity, UUID> {
+public interface InviteJpaRepository extends JpaRepository<InviteJpaEntity, Long> {
     Optional<InviteJpaEntity> findByCodeValue(String codeValue);
 }

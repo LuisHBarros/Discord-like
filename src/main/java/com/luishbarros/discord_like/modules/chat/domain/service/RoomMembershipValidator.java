@@ -17,7 +17,7 @@ public class RoomMembershipValidator {
         this.roomRepository = roomRepository;
     }
 
-    public Room validateAndGetRoom(UUID roomId, UUID userId) {
+    public Room validateAndGetRoom(Long roomId, Long userId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
 

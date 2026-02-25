@@ -5,9 +5,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record MessageEvents(
-        UUID messageId,
-        UUID roomId,
-        UUID senderId,
+        Long messageId,
+        Long roomId,
+        Long senderId,
         String ciphertext,
         Instant editedAt,
         EventType type

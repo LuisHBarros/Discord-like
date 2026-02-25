@@ -1,10 +1,11 @@
 package com.luishbarros.discord_like.modules.chat.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+
+
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 @Entity
 @Table(name = "rooms")
@@ -12,18 +13,18 @@ public class RoomJpaEntity {
 
     @Id
     @Column(name = "id")
-    private UUID id;
+    private Long id;
 
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "owner_id", nullable = false)
-    private UUID ownerId;
+    private Long ownerId;
 
     @ElementCollection
     @CollectionTable(name = "room_members", joinColumns = @JoinColumn(name = "room_id"))
     @Column(name = "user_id", nullable = false)
-    private Set<UUID> memberIds = new HashSet<>();
+    private Set<Long> memberIds = new HashSet<>();
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -33,7 +34,7 @@ public class RoomJpaEntity {
 
     protected RoomJpaEntity() {}
 
-    public RoomJpaEntity(UUID id, String name, UUID ownerId, Set<UUID> memberIds, Instant createdAt, Instant updatedAt) {
+    public RoomJpaEntity(Long id, String name, Long ownerId, Set<Long> memberIds, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.name = name;
         this.ownerId = ownerId;
@@ -42,10 +43,10 @@ public class RoomJpaEntity {
         this.updatedAt = updatedAt;
     }
 
-    public UUID getId() { return id; }
+    public Long getId() { return id; }
     public String getName() { return name; }
-    public UUID getOwnerId() { return ownerId; }
-    public Set<UUID> getMemberIds() { return Set.copyOf(memberIds); }
+    public Long getOwnerId() { return ownerId; }
+    public Set<Long> getMemberIds() { return Set.copyOf(memberIds); }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 

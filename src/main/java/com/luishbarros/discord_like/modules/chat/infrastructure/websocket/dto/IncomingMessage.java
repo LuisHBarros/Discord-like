@@ -1,10 +1,9 @@
 package com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto;
 
-import java.util.UUID;
 
 public record IncomingMessage(
         String type,
-        UUID roomId,
+        Long roomId,
         String content,
-        UUID senderId
+        Long senderId
 ) {}

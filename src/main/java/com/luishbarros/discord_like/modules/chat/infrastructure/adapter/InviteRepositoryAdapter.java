@@ -7,7 +7,6 @@ import com.luishbarros.discord_like.modules.chat.infrastructure.persistence.repo
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class InviteRepositoryAdapter implements InviteRepository {
@@ -25,7 +24,7 @@ public class InviteRepositoryAdapter implements InviteRepository {
     }
 
     @Override
-    public Optional<Invite> findById(UUID id) {
+    public Optional<Invite> findById(Long id) {
         return jpaRepository.findById(id)
                 .map(InviteJpaEntity::toDomain);
     }

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class MessageRepositoryAdapter implements MessageRepository {
@@ -28,18 +27,18 @@ public class MessageRepositoryAdapter implements MessageRepository {
     }
 
     @Override
-    public Optional<Message> findById(UUID id) {
+    public Optional<Message> findById(Long id) {
         return jpaRepository.findById(id).map(MessageJpaEntity::toDomain);
     }
 
     @Override
-    public Optional<Message> findByIdAndRoomId(UUID messageId, UUID roomId) {
+    public Optional<Message> findByIdAndRoomId(Long messageId, Long roomId) {
         return jpaRepository.findByIdAndRoomId(messageId, roomId)
                 .map(MessageJpaEntity::toDomain);
     }
 
     @Override
-    public List<Message> findByRoomId(UUID roomId) {
+    public List<Message> findByRoomId(Long roomId) {
         return jpaRepository.findByRoomId(roomId)
                 .stream()
                 .map(MessageJpaEntity::toDomain)
@@ -47,7 +46,7 @@ public class MessageRepositoryAdapter implements MessageRepository {
     }
 
     @Override
-    public List<Message> findByRoomId(UUID roomId, int limit, int offset) {
+    public List<Message> findByRoomId(Long roomId, int limit, int offset) {
         int page = (limit > 0) ? (offset / limit) : 0;
         Pageable pageable = PageRequest.of(page, limit, Sort.by("createdAt").descending());
 
@@ -58,7 +57,7 @@ public class MessageRepositoryAdapter implements MessageRepository {
     }
 
     @Override
-    public List<Message> findByRoomIdBefore(UUID roomId, UUID beforeMessageId, int limit) {
+    public List<Message> findByRoomIdBefore(Long roomId, Long beforeMessageId, int limit) {
         Pageable pageable = PageRequest.of(0, limit, Sort.by("createdAt").descending());
         return jpaRepository.findByRoomIdAndIdBefore(roomId, beforeMessageId, pageable)
                 .stream()
@@ -67,17 +66,17 @@ public class MessageRepositoryAdapter implements MessageRepository {
     }
 
     @Override
-    public void deleteById(UUID id) {
+    public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }
 
     @Override
-    public void deleteByRoomId(UUID roomId) {
+    public void deleteByRoomId(Long roomId) {
         jpaRepository.deleteByRoomId(roomId);
     }
 
     @Override
-    public long countByRoomId(UUID roomId) {
+    public long countByRoomId(Long roomId) {
         return jpaRepository.countByRoomId(roomId);
     }
 }

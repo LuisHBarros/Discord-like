@@ -1,27 +1,23 @@
 package com.luishbarros.discord_like.modules.chat.domain.model;
 
 import com.luishbarros.discord_like.modules.chat.domain.error.InvalidRoomError;
-import com.luishbarros.discord_like.modules.chat.domain.model.value_object.InviteCode;
-import jakarta.persistence.*;
+import com.luishbarros.discord_like.shared.domain.model.BaseEntity;
+
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
-public class Room {
+public class Room extends BaseEntity {
 
-    private UUID id;
     private String name;
-    private UUID ownerId;
-    private final Set<UUID> memberIds = new HashSet<>();
+    private Long ownerId;
+    private final Set<Long> memberIds = new HashSet<>();
     private Instant createdAt;
     private Instant updatedAt;
 
-    protected Room() {
-    }
+    protected Room() {}
 
-    public Room(String name, UUID ownerId, Instant createdAt) {
-        this.id = UUID.randomUUID();
+    public Room(String name, Long ownerId, Instant createdAt) {
         this.name = name;
         this.ownerId = ownerId;
         this.memberIds.add(ownerId);
@@ -29,7 +25,7 @@ public class Room {
         this.updatedAt = createdAt;
     }
 
-    public static Room reconstitute(UUID id, String name, UUID ownerId, Set<UUID> memberIds, Instant createdAt, Instant updatedAt) {
+    public static Room reconstitute(Long id, String name, Long ownerId, Set<Long> memberIds, Instant createdAt, Instant updatedAt) {
         Room room = new Room();
         room.id = id;
         room.name = name;
@@ -40,28 +36,12 @@ public class Room {
         return room;
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
     public void setName(String name, Instant updatedAt) {
         this.name = name;
         this.updatedAt = updatedAt;
     }
 
-    public UUID getOwnerId() {
-        return ownerId;
-    }
-
-    public Set<UUID> getMemberIds() {
-        return Set.copyOf(memberIds);
-    }
-
-    public void addMember(UUID userId, Instant updatedAt) {
+    public void addMember(Long userId, Instant updatedAt) {
         if (userId == null) {
             throw new InvalidRoomError("User ID cannot be null");
         }
@@ -69,7 +49,7 @@ public class Room {
         this.updatedAt = updatedAt;
     }
 
-    public void removeMember(UUID userId, Instant updatedAt) {
+    public void removeMember(Long userId, Instant updatedAt) {
         if (this.memberIds.size() <= 1) {
             throw new InvalidRoomError("Cannot remove last member");
         }
@@ -80,20 +60,17 @@ public class Room {
         this.updatedAt = updatedAt;
     }
 
-    public boolean isMember(UUID userId) {
+    public boolean isMember(Long userId) {
         return this.memberIds.contains(userId);
     }
 
-    public boolean isOwner(UUID userId) {
+    public boolean isOwner(Long userId) {
         return this.ownerId.equals(userId);
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
+    public String getName()         { return name; }
+    public Long getOwnerId()        { return ownerId; }
+    public Set<Long> getMemberIds() { return Set.copyOf(memberIds); }
+    public Instant getCreatedAt()   { return createdAt; }
+    public Instant getUpdatedAt()   { return updatedAt; }
 }

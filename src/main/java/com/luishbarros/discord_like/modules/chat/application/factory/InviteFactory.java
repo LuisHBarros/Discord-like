@@ -10,7 +10,7 @@ import java.util.UUID;
 @Service
 public class InviteFactory {
 
-    public Invite create(UUID roomId, UUID createdByUserId, Instant now) {
+    public Invite create(Long roomId, Long createdByUserId, Instant now) {
         String codeValue = generateCode();
         InviteCode code = new InviteCode(codeValue, createdByUserId);
         return new Invite(roomId, createdByUserId, code, now);

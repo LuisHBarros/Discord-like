@@ -8,13 +8,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, UUID> {
+public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, Long> {
 
     @Query("SELECT r FROM RoomJpaEntity r WHERE :memberId MEMBER OF r.memberIds")
-    List<RoomJpaEntity> findByMemberId(@Param("memberId") UUID memberId);
+    List<RoomJpaEntity> findByMemberId(@Param("memberId") Long memberId);
 
     @Query("SELECT r FROM RoomJpaEntity r JOIN InviteJpaEntity i ON i.roomId = r.id WHERE i.codeValue = :inviteCode")
     Optional<RoomJpaEntity> findByInviteCode(@Param("inviteCode") String inviteCode);

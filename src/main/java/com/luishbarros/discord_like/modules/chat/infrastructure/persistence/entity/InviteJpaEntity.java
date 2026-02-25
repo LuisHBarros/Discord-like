@@ -1,8 +1,8 @@
 package com.luishbarros.discord_like.modules.chat.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+
 import java.time.Instant;
-import java.util.UUID;
 
 @Entity
 @Table(name = "invites")
@@ -10,13 +10,13 @@ public class InviteJpaEntity {
 
     @Id
     @Column(name = "id")
-    private UUID id;
+    private Long id;
 
     @Column(name = "room_id", nullable = false)
-    private UUID roomId;
+    private Long roomId;
 
     @Column(name = "created_by_user_id", nullable = false)
-    private UUID createdByUserId;
+    private Long createdByUserId;
 
     @Column(name = "code_value", nullable = false, unique = true)
     private String codeValue;
@@ -29,7 +29,7 @@ public class InviteJpaEntity {
 
     protected InviteJpaEntity() {}
 
-    public InviteJpaEntity(UUID id, UUID roomId, UUID createdByUserId, String codeValue, Instant createdAt, Instant expiresAt) {
+    public InviteJpaEntity(Long id, Long roomId, Long createdByUserId, String codeValue, Instant createdAt, Instant expiresAt) {
         this.id = id;
         this.roomId = roomId;
         this.createdByUserId = createdByUserId;
@@ -39,9 +39,9 @@ public class InviteJpaEntity {
     }
 
     // Getters
-    public UUID getId() { return id; }
-    public UUID getRoomId() { return roomId; }
-    public UUID getCreatedByUserId() { return createdByUserId; }
+    public Long getId() { return id; }
+    public Long getRoomId() { return roomId; }
+    public Long getCreatedByUserId() { return createdByUserId; }
     public String getCodeValue() { return codeValue; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getExpiresAt() { return expiresAt; }

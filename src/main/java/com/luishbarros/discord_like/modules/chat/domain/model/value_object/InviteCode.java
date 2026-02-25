@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record InviteCode(
         String value,
-        UUID createdByUserId
+        Long createdByUserId
 ) {
     public InviteCode {
         if (value == null || value.isBlank()) {
