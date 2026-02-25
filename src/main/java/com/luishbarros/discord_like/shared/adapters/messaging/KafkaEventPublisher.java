@@ -1,6 +1,6 @@
-package com.luishbarros.discord_like.modules.chat.infrastructure.event;
+package com.luishbarros.discord_like.shared.adapters.messaging;
 
-import com.luishbarros.discord_like.modules.chat.domain.ports.EventPublisher;
+import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +21,11 @@ public class KafkaEventPublisher implements EventPublisher {
 
     private String getTopicForEvent(Object event) {
         return switch (event.getClass().getSimpleName()) {
-            case "RoomEvents" -> "room-events";
-            case "MessageEvents" -> "message-events";
-            case "InviteEvents" -> "invite-events";
-            default -> "domain-events";
+            case "RoomEvents"     -> "room-events";
+            case "MessageEvents"  -> "message-events";
+            case "InviteEvents"   -> "invite-events";
+            case "UserEvents"     -> "user-events";
+            default               -> "domain-events";
         };
     }
 }
