@@ -45,3 +45,13 @@ jwt:
   refresh-secret: ${JWT_REFRESH_SECRET:your-256-bit-secret-key-for-refresh-tokens-here}
   access-expiration-ms: 900000      # 15 minutes
   refresh-expiration-ms: 604800000  # 7 days
+
+encryption:
+  secret: ${ENCRYPTION_SECRET}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
