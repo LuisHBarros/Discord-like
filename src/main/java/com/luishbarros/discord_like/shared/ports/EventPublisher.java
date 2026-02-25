@@ -1,4 +1,4 @@
-package com.luishbarros.discord_like.modules.chat.domain.ports;
+package com.luishbarros.discord_like.shared.ports;
 
 public interface EventPublisher {
     void publish(Object event);
