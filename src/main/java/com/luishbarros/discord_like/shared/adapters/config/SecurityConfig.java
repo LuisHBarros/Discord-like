@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll() // o interceptor já faz a auth do WS
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

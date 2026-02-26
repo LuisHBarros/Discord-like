@@ -127,10 +127,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private Long extractUserId(WebSocketSession session) {
-        if (session.getPrincipal() == null) {
+        Long userId = (Long) session.getAttributes().get("userId");
+        if (userId == null) {
             throw new IllegalStateException("Unauthenticated WebSocket connection");
         }
-        return (Long) session.getAttributes().get("userId");
+        return userId;
     }
 
 }
