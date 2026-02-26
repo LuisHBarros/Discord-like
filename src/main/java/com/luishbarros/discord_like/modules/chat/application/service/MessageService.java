@@ -39,9 +39,9 @@ public class MessageService {
         roomValidator.validateAndGetRoom(roomId, senderId);
         String ciphertext = encryptionService.encrypt(plaintext);
         Message message = new Message(senderId, roomId, ciphertext, now);
-        messageRepository.save(message);
-        eventPublisher.publish(MessageEvents.created(message));
-        return message;
+        Message saved = messageRepository.save(message);
+        eventPublisher.publish(MessageEvents.created(saved));
+        return saved;
     }
 
     public List<Message> findByRoomId(Long roomId, Long userId, int limit, int offset) {

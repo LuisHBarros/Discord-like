@@ -14,7 +14,8 @@ public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, Long> {
 
     @Query("SELECT r FROM RoomJpaEntity r WHERE :memberId MEMBER OF r.memberIds")
     List<RoomJpaEntity> findByMemberId(@Param("memberId") Long memberId);
-
-    @Query("SELECT r FROM RoomJpaEntity r JOIN InviteJpaEntity i ON i.roomId = r.id WHERE i.codeValue = :inviteCode")
+    
+    @Query("SELECT r FROM RoomJpaEntity r WHERE r.id = " +
+            "(SELECT i.roomId FROM InviteJpaEntity i WHERE i.codeValue = :inviteCode)")
     Optional<RoomJpaEntity> findByInviteCode(@Param("inviteCode") String inviteCode);
 }

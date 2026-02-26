@@ -47,7 +47,8 @@ jwt:
   refresh-expiration-ms: 604800000  # 7 days
 
 encryption:
-  secret: ${ENCRYPTION_SECRET}
+  #secret: ${ENCRYPTION_SECRET}
+  secret: ${ENCRYPTION_SECRET:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
 
 springdoc:
   api-docs:

@@ -1,5 +1,7 @@
 package com.luishbarros.discord_like.modules.chat.infrastructure.persistence.entity;
 
+import com.luishbarros.discord_like.modules.chat.domain.model.Invite;
+import com.luishbarros.discord_like.modules.chat.domain.model.value_object.InviteCode;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -10,6 +12,7 @@ public class InviteJpaEntity {
 
     @Id
     @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "room_id", nullable = false)
@@ -47,23 +50,20 @@ public class InviteJpaEntity {
     public Instant getExpiresAt() { return expiresAt; }
 
     // Mapping to domain model
-    public com.luishbarros.discord_like.modules.chat.domain.model.Invite toDomain() {
-        com.luishbarros.discord_like.modules.chat.domain.model.value_object.InviteCode code =
-                new com.luishbarros.discord_like.modules.chat.domain.model.value_object.InviteCode(
-                        this.codeValue,
-                        this.createdByUserId
-                );
-
-        return new com.luishbarros.discord_like.modules.chat.domain.model.Invite(
+    public Invite toDomain() {
+        InviteCode code = new InviteCode(this.codeValue, this.createdByUserId);
+        return Invite.reconstitute(
+                this.id,
                 this.roomId,
                 this.createdByUserId,
                 code,
-                this.createdAt
+                this.createdAt,
+                this.expiresAt   // <-- preserva o expiresAt real do banco
         );
     }
 
     // Mapping from domain model
-    public static InviteJpaEntity fromDomain(com.luishbarros.discord_like.modules.chat.domain.model.Invite invite) {
+    public static InviteJpaEntity fromDomain(Invite invite) {
         return new InviteJpaEntity(
                 invite.getId(),
                 invite.getRoomId(),
