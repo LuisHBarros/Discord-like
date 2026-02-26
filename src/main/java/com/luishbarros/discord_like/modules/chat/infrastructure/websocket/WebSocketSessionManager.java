@@ -1,6 +1,5 @@
 package com.luishbarros.discord_like.modules.chat.infrastructure.websocket;
 
-import com.luishbarros.discord_like.shared.ports.Broadcaster;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -10,12 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class WebSocketSessionManager {
-
-    private final Broadcaster broadcaster;
-
-    public WebSocketSessionManager(Broadcaster broadcaster) {
-        this.broadcaster = broadcaster;
-    }
 
     private final Map<String, WebSocketSession> allSessions = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> roomSessions = new ConcurrentHashMap<>();
@@ -51,7 +44,6 @@ public class WebSocketSessionManager {
                 session.sendMessage(new org.springframework.web.socket.TextMessage(message));
             }
         }
-        broadcaster.broadcast("ws-room-" + roomId, message);
     }
 
     public void sendToSession(String sessionId, String message) throws IOException {

@@ -1,9 +1,10 @@
 package com.luishbarros.discord_like.modules.chat.infrastructure.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.ConnectResponse;
+import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.ErrorResponse;
 import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.IncomingMessage;
 import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.OutgoingMessage;
-import com.luishbarros.discord_like.modules.chat.infrastructure.websocket.dto.ErrorResponse;
 import com.luishbarros.discord_like.modules.chat.application.service.MessageService;
 import com.luishbarros.discord_like.modules.chat.domain.model.Message;
 import com.luishbarros.discord_like.shared.ports.PresenceStore;
@@ -121,7 +122,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void sendConnectMessage(WebSocketSession session, String message) throws IOException {
         session.sendMessage(new TextMessage(
-                objectMapper.writeValueAsString(ErrorResponse.of(message, "info"))
+                objectMapper.writeValueAsString(ConnectResponse.of(message))
         ));
     }
 
