@@ -34,107 +34,127 @@ The project follows **Hexagonal Architecture (Ports & Adapters)** with **feature
 ### Dependency Flow
 
 ```
-Adapters/Infrastructure → Ports ← Application ← Domain
+Infrastructure → Ports ← Application ← Domain
 ```
 
 - Domain layer has zero external dependencies
 - Ports define interfaces (in `domain/ports/`)
 - Application services orchestrate domain logic via ports
-- Infrastructure/adapters provide concrete implementations
+- Infrastructure provides concrete implementations
 
 ### Module: `auth`
 
 ```
 modules/auth/
-├── adapters/
-│   ├── http/          # AuthController, UserController
-│   ├── persistence/   # JpaUserRepository (adapter), SpringDataUserRepository (Spring Data interface)
-│   └── security/      # JwtFilter, JwtTokenProvider, Argon2PasswordHasher,
-│                      # InMemoryTokenBlacklist, AuthenticatedUser
 ├── application/
-│   ├── dto/           # LoginRequest, RegisterRequest, RefreshRequest, AuthResponse, UserResponse
+│   ├── dto/           # LoginRequest, RegisterRequest, RefreshRequest, AuthResponse,
+│   │                  # UserResponse, ChangePasswordRequest
 │   └── service/       # AuthService, UserService
 ├── domain/
-│   └── model/         # User
-│       └── error/     # InvalidCredentialsError, InvalidTokenError, UserNotFoundError, DuplicateEmailError
-└── ports/             # UserRepository, TokenProvider, PasswordHasher, TokenBlacklist
+│   ├── event/         # UserEvents (REGISTERED, PASSWORD_CHANGED, DEACTIVATED, ACTIVATED)
+│   └── model/         # User (changePassword, activate, deactivate)
+│       └── error/     # InvalidCredentialsError, InvalidTokenError, UserNotFoundError,
+│                      # DuplicateEmailError, InvalidUserError
+│   └── ports/
+│       └── repository/ # UserRepository
+└── infrastructure/
+    ├── adapters/      # JpaUserRepository (domain port adapter)
+    ├── event/         # UserEventListener (Kafka consumer, user-events topic)
+    ├── http/          # AuthController, UserController
+    ├── persistence/
+    │   ├── entity/    # UserJpaEntity (with reconstitute() factory)
+    │   └── repository/ # SpringDataUserRepository (Spring Data interface)
+    └── security/      # JwtFilter, JwtTokenProvider, Argon2PasswordHasher,
+                       # InMemoryTokenBlacklist, AuthenticatedUser,
+                       # RedisTokenBlacklist (@Primary)
 ```
 
-**Note:** `AuthService` and `JpaUserRepository` are currently empty stubs — not yet implemented.
-`InMemoryTokenBlacklist` is backed by in-memory storage, not Redis.
-
 ### Module: `chat`
-
-The chat module diverges from `auth` by using an `infrastructure/` package for implementations instead of `adapters/`:
 
 ```
 modules/chat/
 ├── application/
 │   ├── dto/           # CreateRoomRequest, UpdateRoomRequest, JoinRoomRequest,
-│   │                  # SendMessageRequest, RoomResponse, MessageResponse
+│   │                  # SendMessageRequest, RoomResponse, MessageResponse,
+│   │                  # InviteResponse, UpdateMessageRequest
 │   ├── factory/       # InviteFactory (generates 8-char uppercase invite codes)
 │   └── service/       # RoomService, MessageService, InviteService
 ├── domain/
 │   ├── error/         # InvalidRoomError, ForbiddenError, InvalidInviteCodeError,
-│   │                  # InvalidMessageError, RoomNotFoundError, UserNotInRoomError
-│   ├── event/         # RoomEvents, MessageEvents, InviteEvents (static factory methods per event type)
+│   │                  # InvalidMessageError, RoomNotFoundError, UserNotInRoomError,
+│   │                  # EncryptionException
+│   ├── event/         # RoomEvents, MessageEvents, InviteEvents (static factory methods)
 │   ├── model/         # Room, Message, Invite, UserRef
 │   │   └── value_object/  # InviteCode (record)
-│   ├── ports/         # EncryptionService, EventPublisher
+│   ├── ports/         # EncryptionService
 │   │   └── repository/    # RoomRepository, MessageRepository, InviteRepository
-│   └── service/       # RoomMembershipValidator (domain service, used by Room/Message/InviteService)
+│   └── service/       # RoomMembershipValidator (domain service)
 └── infrastructure/
     ├── adapter/       # RoomRepositoryAdapter, MessageRepositoryAdapter, InviteRepositoryAdapter
-    ├── encryption/    # AesEncryptionService (currently an empty stub)
-    ├── event/         # KafkaEventPublisher
+    ├── encryption/    # AesEncryptionService (stub)
+    ├── event/         # InviteEventListener, MessageEventListener, RoomEventListener
+    │                  # (Kafka consumers → broadcast to WebSocket)
+    ├── http/          # RoomController, MessageController
     └── persistence/
         ├── entity/    # RoomJpaEntity, MessageJpaEntity, InviteJpaEntity
-        └── repository/ # RoomJpaRepository, MessageJpaRepository, InviteJpaRepository (Spring Data)
+        └── repository/ # RoomJpaRepository, MessageJpaRepository, InviteJpaRepository
 ```
 
-**Note:** Redis adapters (Broadcaster, PresenceStore) and WebSocket handler are not yet implemented.
-`AesEncryptionService` is an empty stub.
+**Note:** `AesEncryptionService` is an empty stub — message encryption not yet active.
 
 ### Shared
 
 ```
 shared/
 ├── adapters/
-│   ├── config/      # SecurityConfig, WebSocketConfig, RedisConfig, JacksonConfig
+│   ├── config/      # SecurityConfig, WebSocketConfig, RedisConfig, JacksonConfig, OpenApiConfig
 │   ├── http/        # HealthController
+│   ├── messaging/   # KafkaEventPublisher, KafkaBroadcaster
 │   ├── middleware/  # DomainErrorHandler (@RestControllerAdvice)
-│   └── ratelimit/   # InMemoryRateLimiter
+│   ├── presence/    # RedisPresenceStore
+│   └── ratelimit/   # RedisRateLimiter, RateLimitedAuthService
 ├── domain/
-│   └── error/       # DomainError (abstract base for all domain exceptions)
-└── ports/           # RateLimiter, Broadcaster, PresenceStore
+│   ├── error/       # DomainError (abstract base), RateLimitError
+│   └── model/       # BaseEntity (abstract JPA base with Long id)
+└── ports/           # RateLimiter, Broadcaster, PresenceStore, EventPublisher, EventListener<T>
 ```
 
 ### Key Patterns
 
-**Domain reconstitution:** `Room` and `Message` domain objects use a `static reconstitute(UUID id, ...)` factory method for restoring persisted state. The regular constructor always generates a new `UUID.randomUUID()`. JPA entities call `reconstitute()` in `toDomain()`.
+**Domain reconstitution:** `Room`, `Message`, and `User` domain objects use a `static reconstitute(id, ...)` factory method for restoring persisted state. The regular constructor always generates a new `UUID.randomUUID()` (or auto-increment id). JPA entities call `reconstitute()` in `toDomain()`.
 
 **Domain errors:** All domain errors extend `DomainError(code, message)` and are caught globally by `DomainErrorHandler`. Add new error classes by extending `DomainError` and registering the code in `DomainErrorHandler.mapErrorToStatus()`.
 
-**Event publishing:** `KafkaEventPublisher` routes events to Kafka topics based on the event's class simple name: `RoomEvents` → `room-events`, `MessageEvents` → `message-events`, `InviteEvents` → `invite-events`. Event objects are static factory method results, not separate classes.
+**Event publishing:** `KafkaEventPublisher` (in `shared/adapters/messaging/`) routes events to Kafka topics based on the event's class simple name: `RoomEvents` → `room-events`, `MessageEvents` → `message-events`, `InviteEvents` → `invite-events`, `UserEvents` → `user-events`.
+
+**Event consuming:** Each domain area has a dedicated `*EventListener` Kafka consumer in `infrastructure/event/` that deserializes events and broadcasts them to WebSocket clients via the `Broadcaster` port.
+
+**Rate limiting:** `RateLimitedAuthService` is a decorator wrapping `AuthService` that enforces a 5-requests/60s window per client IP using `RedisRateLimiter`.
 
 **Invite flow:** `InviteFactory` creates an `Invite` with an 8-char UUID-derived code and a 24-hour TTL. `InviteService.acceptInvite()` validates expiry, then calls `RoomService`-equivalent logic directly.
+
+**Presence:** `RedisPresenceStore` tracks online users in a Redis Set (`presence:online`) via SADD/SREM/SISMEMBER/SMEMBERS.
 
 ## Key Technologies
 
 - **Spring Boot 4.0.2** with Spring Data JPA, Spring Data Redis, Spring Security, Spring WebSocket
+- **SpringDoc OpenAPI** — Swagger UI at `/swagger-ui.html` with JWT Bearer auth support
 - **PostgreSQL** — primary database; `ddl-auto: update` (schema auto-managed by Hibernate)
-- **Redis** — pub/sub and presence (adapters not yet implemented)
-- **Kafka** — domain event bus via `KafkaEventPublisher`
+- **Redis** — token blacklist, rate limiting, and presence store
+- **Kafka** — domain event bus; producers via `KafkaEventPublisher`, consumers via `*EventListener` classes
 - **JJWT 0.12.6** — JWT access/refresh token generation and validation
 - **BouncyCastle 1.80** — Argon2 password hashing
 
 ## API Endpoints
 
 ### Auth (`/auth`)
-- `POST /auth/register` — Register new user
-- `POST /auth/login` — Login, returns access + refresh tokens
+- `POST /auth/register` — Register new user (rate-limited)
+- `POST /auth/login` — Login, returns access + refresh tokens (rate-limited)
 - `POST /auth/refresh` — Refresh access token
 - `POST /auth/logout` — Blacklist tokens
+- `PATCH /auth/password` — Change password
+- `PATCH /auth/deactivate` — Deactivate account
+- `PATCH /auth/activate` — Activate account
 
 ### Users (`/users`)
 - `GET /users/me` — Current user profile
@@ -159,10 +179,11 @@ shared/
 - `DELETE /messages/{id}` — Delete own message
 
 ### WebSocket
-- `ws://localhost:8000/ws/rooms/{roomId}?token={jwt}` — Real-time room connection (handler not yet implemented)
+- `ws://localhost:8000/ws/rooms/{roomId}?token={jwt}` — Real-time room connection
 
-### Health
+### Health / Docs
 - `GET /health`
+- `GET /swagger-ui.html` — Swagger UI
 
 ## Configuration
 
@@ -182,5 +203,5 @@ shared/
 | `NOT_FOUND`, `ROOM_NOT_FOUND`, `USER_NOT_FOUND`, `MESSAGE_NOT_FOUND` | 404 |
 | `DUPLICATE_EMAIL`, `CONFLICT` | 409 |
 | `RATE_LIMITED` | 429 |
-| `VALIDATION_ERROR` | 400 |
+| `VALIDATION_ERROR`, `INVALID_USER` | 400 |
 | anything else | 500 |
