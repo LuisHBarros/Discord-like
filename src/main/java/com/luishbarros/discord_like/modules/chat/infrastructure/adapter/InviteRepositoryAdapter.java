@@ -18,9 +18,9 @@ public class InviteRepositoryAdapter implements InviteRepository {
     }
 
     @Override
-    public void save(Invite invite) {
-        InviteJpaEntity entity = InviteJpaEntity.fromDomain(invite);
-        jpaRepository.save(entity);
+    public Invite save(Invite invite) {
+        InviteJpaEntity saved = jpaRepository.save(InviteJpaEntity.fromDomain(invite));
+        return saved.toDomain();
     }
 
     @Override

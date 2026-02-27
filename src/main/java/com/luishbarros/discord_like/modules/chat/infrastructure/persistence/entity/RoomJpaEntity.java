@@ -23,7 +23,11 @@ public class RoomJpaEntity {
     private Long ownerId;
 
     @ElementCollection
-    @CollectionTable(name = "room_members", joinColumns = @JoinColumn(name = "room_id"))
+    @CollectionTable(
+            name = "room_members",
+            joinColumns = @JoinColumn(name = "room_id"),
+            indexes = @Index(name = "idx_room_members_user_room", columnList = "user_id, room_id")
+    )
     @Column(name = "user_id", nullable = false)
     private Set<Long> memberIds = new HashSet<>();
 

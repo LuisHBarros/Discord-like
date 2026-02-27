@@ -45,11 +45,11 @@ public class InviteService {
         membershipValidator.validateAndGetRoom(roomId, userId);
 
         Invite invite = inviteFactory.create(roomId, userId, now);
-        inviteRepository.save(invite);
+        Invite saved = inviteRepository.save(invite);
 
-        eventPublisher.publish(InviteEvents.created(invite));
+        eventPublisher.publish(InviteEvents.created(saved));
 
-        return invite;
+        return saved;
     }
 
     public void acceptInvite(String inviteCodeValue, Long userId, Instant now) {

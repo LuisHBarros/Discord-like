@@ -2,9 +2,13 @@ package com.luishbarros.discord_like.modules.chat.infrastructure.websocket;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.TextMessage;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -22,7 +26,12 @@ public class WebSocketSessionManager {
         allSessions.remove(sessionId);
 
         // Remove from all rooms
-        roomSessions.forEach((roomId, sessions) -> sessions.remove(sessionId));
+        roomSessions.forEach((roomId, sessions) -> {
+            sessions.remove(sessionId);
+            if (sessions.isEmpty()) {
+                roomSessions.remove(roomId, sessions);
+            }
+        });
     }
 
     public void joinRoom(String roomId, WebSocketSession session) {
@@ -31,25 +40,42 @@ public class WebSocketSessionManager {
     }
 
     public void leaveRoom(String roomId, WebSocketSession session) {
-        roomSessions.getOrDefault(roomId, new HashSet<>())
-                .remove(session.getId());
+        Set<String> sessions = roomSessions.get(roomId);
+        if (sessions == null) {
+            return;
+        }
+
+        sessions.remove(session.getId());
+        if (sessions.isEmpty()) {
+            roomSessions.remove(roomId, sessions);
+        }
     }
 
     public void broadcastToRoom(String roomId, String message) throws IOException {
-        Set<String> sessions = roomSessions.getOrDefault(roomId, new HashSet<>());
+        Set<String> sessions = roomSessions.getOrDefault(roomId, Collections.emptySet());
+        if (sessions.isEmpty()) {
+            return;
+        }
 
-        for (String sessionId : sessions) {
+        for (String sessionId : List.copyOf(sessions)) {
             WebSocketSession session = allSessions.get(sessionId);
-            if (session != null && session.isOpen()) {
-                session.sendMessage(new org.springframework.web.socket.TextMessage(message));
+            if (session == null || !session.isOpen()) {
+                sessions.remove(sessionId);
+                continue;
             }
+
+            session.sendMessage(new TextMessage(message));
+        }
+
+        if (sessions.isEmpty()) {
+            roomSessions.remove(roomId, sessions);
         }
     }
 
     public void sendToSession(String sessionId, String message) throws IOException {
         WebSocketSession session = allSessions.get(sessionId);
         if (session != null && session.isOpen()) {
-            session.sendMessage(new org.springframework.web.socket.TextMessage(message));
+            session.sendMessage(new TextMessage(message));
         }
     }
 }

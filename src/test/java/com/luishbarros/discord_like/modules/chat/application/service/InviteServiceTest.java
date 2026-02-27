@@ -46,49 +46,54 @@ class InviteServiceTest {
     @InjectMocks
     private InviteService inviteService;
 
-    private static final Long    ROOM_ID    = 10L;
-    private static final Long    OWNER_ID   = 1L;
-    private static final Long    MEMBER_ID  = 2L;
-    private static final Long    JOINER_ID  = 3L;
-    private static final Long    INVITE_ID  = 50L;
-    private static final String  CODE_VALUE = "ABCD1234";
-    private static final Instant NOW        = Instant.parse("2026-01-01T00:00:00Z");
+    private static final Long ROOM_ID = 10L;
+    private static final Long OWNER_ID = 1L;
+    private static final Long MEMBER_ID = 2L;
+    private static final Long JOINER_ID = 3L;
+    private static final Long INVITE_ID = 50L;
+    private static final String CODE_VALUE = "ABCD1234";
+    private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     private Room roomWith2Members() {
         return Room.reconstitute(ROOM_ID, "General", OWNER_ID, Set.of(OWNER_ID, MEMBER_ID), NOW, NOW);
     }
 
+    private Invite unsavedInvite() {
+        InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
+        return new Invite(ROOM_ID, OWNER_ID, code, NOW);
+    }
+
     private Invite validInvite() {
         InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
-        // expiresAt is 24h from NOW → still valid
         return Invite.reconstitute(INVITE_ID, ROOM_ID, OWNER_ID, code, NOW, NOW.plusSeconds(3600 * 24));
     }
 
     private Invite expiredInvite() {
         InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
-        // expiresAt is in the past
         return Invite.reconstitute(INVITE_ID, ROOM_ID, OWNER_ID, code, NOW.minusSeconds(3600 * 48), NOW.minusSeconds(1));
     }
-
-    // ─── GenerateInvite ───────────────────────────────────────────────────────
 
     @Nested
     class GenerateInvite {
 
         @Test
         void givenMember_savesInviteAndPublishesEvent() {
-            Invite invite = validInvite();
+            Invite createdInvite = unsavedInvite();
+            Invite savedInvite = validInvite();
             when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
-            when(inviteFactory.create(ROOM_ID, OWNER_ID, NOW)).thenReturn(invite);
+            when(inviteFactory.create(ROOM_ID, OWNER_ID, NOW)).thenReturn(createdInvite);
+            when(inviteRepository.save(createdInvite)).thenReturn(savedInvite);
 
             Invite result = inviteService.generateInvite(ROOM_ID, OWNER_ID, NOW);
 
-            assertThat(result).isSameAs(invite);
-            verify(inviteRepository).save(invite);
+            assertThat(result).isSameAs(savedInvite);
+            assertThat(result.getId()).isEqualTo(INVITE_ID);
+            verify(inviteRepository).save(createdInvite);
 
             ArgumentCaptor<InviteEvents> captor = ArgumentCaptor.forClass(InviteEvents.class);
             verify(eventPublisher).publish(captor.capture());
             assertThat(captor.getValue().type()).isEqualTo(InviteEvents.EventType.CREATED);
+            assertThat(captor.getValue().inviteId()).isEqualTo(INVITE_ID);
         }
 
         @Test
@@ -103,8 +108,6 @@ class InviteServiceTest {
         }
     }
 
-    // ─── AcceptInvite ─────────────────────────────────────────────────────────
-
     @Nested
     class AcceptInvite {
 
@@ -115,12 +118,10 @@ class InviteServiceTest {
 
             inviteService.acceptInvite(CODE_VALUE, JOINER_ID, NOW);
 
-            // Room saved with new member
             ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
             verify(roomRepository).save(roomCaptor.capture());
             assertThat(roomCaptor.getValue().getMemberIds()).contains(JOINER_ID);
 
-            // Two events: MEMBER_JOINED and INVITE ACCEPTED
             ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
             verify(eventPublisher, org.mockito.Mockito.times(2)).publish(eventCaptor.capture());
             List<Object> events = eventCaptor.getAllValues();
@@ -159,8 +160,6 @@ class InviteServiceTest {
                     .isInstanceOf(RoomNotFoundError.class);
         }
     }
-
-    // ─── RevokeInvite ─────────────────────────────────────────────────────────
 
     @Nested
     class RevokeInvite {

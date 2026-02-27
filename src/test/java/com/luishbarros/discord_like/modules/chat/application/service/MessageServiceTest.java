@@ -66,12 +66,14 @@ class MessageServiceTest {
         void givenMember_encryptsAndSavesAndPublishesEvent() {
             when(roomValidator.validateAndGetRoom(ROOM_ID, SENDER_ID)).thenReturn(room());
             when(encryptionService.encrypt(PLAINTEXT)).thenReturn(CIPHERTEXT);
+            when(messageRepository.save(any(Message.class))).thenReturn(message(SENDER_ID));
 
             Message result = messageService.createMessage(SENDER_ID, ROOM_ID, PLAINTEXT, NOW);
 
+            assertThat(result.getId()).isEqualTo(MESSAGE_ID);
             assertThat(result.getCiphertext()).isEqualTo(CIPHERTEXT);
             assertThat(result.getSenderId()).isEqualTo(SENDER_ID);
-            verify(messageRepository).save(result);
+            verify(messageRepository).save(any(Message.class));
 
             ArgumentCaptor<MessageEvents> captor = ArgumentCaptor.forClass(MessageEvents.class);
             verify(eventPublisher).publish(captor.capture());
