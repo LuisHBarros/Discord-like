@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 
 @Component
@@ -77,6 +78,20 @@ public class JwtTokenProvider implements TokenProvider {
             return Long.parseLong(claims.getSubject());
         } catch (JwtException | IllegalArgumentException e) {
             throw new InvalidTokenError("Invalid or expired token");
+        }
+    }
+
+    @Override
+    public Instant getInspiration(String token){
+        try{
+            Claims claims = Jwts.parser()
+                    .verifyWith(accessKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return claims.getExpiration().toInstant();
+        } catch (JwtException e){
+            return  Instant.now();
         }
     }
 }

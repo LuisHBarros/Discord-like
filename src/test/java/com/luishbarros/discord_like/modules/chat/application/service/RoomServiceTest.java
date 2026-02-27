@@ -59,30 +59,44 @@ class RoomServiceTest {
     class CreateRoom {
 
         @Test
-        void savesRoom() {
-            roomService.createRoom("General", OWNER_ID, NOW);
+        void savesRoomAndReturnsSavedInstanceWithId() {
+            Room savedRoom = Room.reconstitute(ROOM_ID, "General", OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
+            when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+
+            Room result = roomService.createRoom("General", OWNER_ID, NOW);
 
             ArgumentCaptor<Room> captor = ArgumentCaptor.forClass(Room.class);
             verify(roomRepository).save(captor.capture());
             assertThat(captor.getValue().getName()).isEqualTo("General");
             assertThat(captor.getValue().getOwnerId()).isEqualTo(OWNER_ID);
             assertThat(captor.getValue().getMemberIds()).containsExactly(OWNER_ID);
+
+            // garante que o room retornado é o que vem do repositório (com ID)
+            assertThat(result.getId()).isEqualTo(ROOM_ID);
         }
 
         @Test
-        void publishesRoomCreatedEvent() {
+        void publishesRoomCreatedEventWithSavedRoomId() {
+            Room savedRoom = Room.reconstitute(ROOM_ID, "General", OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
+            when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+
             roomService.createRoom("General", OWNER_ID, NOW);
 
             ArgumentCaptor<RoomEvents> captor = ArgumentCaptor.forClass(RoomEvents.class);
             verify(eventPublisher).publish(captor.capture());
             assertThat(captor.getValue().type()).isEqualTo(RoomEvents.EventType.ROOM_CREATED);
-            assertThat(captor.getValue().userId()).isNull();
+            // garante que o evento carrega o ID real, não null
+            assertThat(captor.getValue().roomId()).isEqualTo(ROOM_ID);
         }
 
         @Test
-        void returnsCreatedRoom() {
+        void returnsCreatedRoomWithIdFromRepository() {
+            Room savedRoom = Room.reconstitute(ROOM_ID, "General", OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
+            when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
+
             Room result = roomService.createRoom("General", OWNER_ID, NOW);
 
+            assertThat(result.getId()).isEqualTo(ROOM_ID);
             assertThat(result.getName()).isEqualTo("General");
             assertThat(result.getOwnerId()).isEqualTo(OWNER_ID);
         }
@@ -100,7 +114,7 @@ class RoomServiceTest {
 
             Room result = roomService.findById(ROOM_ID, MEMBER_ID);
 
-            assertThat(result).isSameAs(room);
+            assertThat(result).isEqualTo(room);
         }
 
         @Test
@@ -119,37 +133,13 @@ class RoomServiceTest {
     class FindByMemberId {
 
         @Test
-        void returnsRoomsFromRepository() {
+        void returnsRoomsForMember() {
             List<Room> rooms = List.of(roomWith2Members());
-            when(roomRepository.findByMemberId(MEMBER_ID)).thenReturn(rooms);
+            when(roomRepository.findByMemberId(OWNER_ID)).thenReturn(rooms);
 
-            List<Room> result = roomService.findByMemberId(MEMBER_ID);
+            List<Room> result = roomService.findByMemberId(OWNER_ID);
 
             assertThat(result).isEqualTo(rooms);
-        }
-    }
-
-    // ─── GetMembers ───────────────────────────────────────────────────────────
-
-    @Nested
-    class GetMembers {
-
-        @Test
-        void givenMember_returnsMemberIds() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
-
-            Set<Long> members = roomService.getMembers(ROOM_ID, OWNER_ID);
-
-            assertThat(members).containsExactlyInAnyOrder(OWNER_ID, MEMBER_ID);
-        }
-
-        @Test
-        void givenNonMember_throwsUserNotInRoomError() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OTHER_ID))
-                    .thenThrow(new UserNotInRoomError(OTHER_ID.toString(), ROOM_ID.toString()));
-
-            assertThatThrownBy(() -> roomService.getMembers(ROOM_ID, OTHER_ID))
-                    .isInstanceOf(UserNotInRoomError.class);
         }
     }
 

@@ -2,11 +2,9 @@ package com.luishbarros.discord_like.modules.auth.infrastructure.http;
 
 import com.luishbarros.discord_like.modules.auth.application.dto.ChangePasswordRequest;
 import com.luishbarros.discord_like.modules.auth.application.dto.UserResponse;
-import com.luishbarros.discord_like.modules.auth.application.service.AuthService;
 import com.luishbarros.discord_like.modules.auth.application.service.UserService;
 import com.luishbarros.discord_like.modules.auth.infrastructure.security.AuthenticatedUser;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import com.luishbarros.discord_like.shared.adapters.ratelimit.RateLimitedAuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +14,9 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    private final AuthService authService;
+    private final RateLimitedAuthService authService;
 
-    public UserController(UserService userService, AuthService authService) {
+    public UserController(UserService userService, RateLimitedAuthService authService) {
         this.userService = userService;
         this.authService = authService;
     }

@@ -35,9 +35,9 @@ public class RoomService {
 
     public Room createRoom(String name, Long ownerId, Instant now) {
         Room room = new Room(name, ownerId, now);
-        roomRepository.save(room);
-        eventPublisher.publish(RoomEvents.roomCreated(room, now));
-        return room;
+        Room saved = roomRepository.save(room);
+        eventPublisher.publish(RoomEvents.roomCreated(saved, now));
+        return saved;
     }
 
     public Room findById(Long roomId, Long userId) {

@@ -28,13 +28,15 @@ public class Argon2PasswordHasher implements PasswordHasher {
         String saltBase64 = Base64.getEncoder().encodeToString(salt);
         String hashBase64 = Base64.getEncoder().encodeToString(hash);
 
-        return saltBase64 + ":" + hashBase64;
+        return String.format("$argon2id$v=19$m=%d,t=%d,p=%d$%s$%s",
+                MEMORY, ITERATIONS, PARALLELISM, saltBase64, hashBase64);
     }
 
     @Override
     public boolean verify(String plaintext, String storedHash) {
-        String[] parts = storedHash.split(":");
-        if (parts.length != 2) return false;
+        String[] parts = storedHash.split("\\$");
+        if (parts.length != 6 || !"argon2id".equals(parts[1])) return false;
+
 
         byte[] salt = Base64.getDecoder().decode(parts[0]);
         byte[] expectedHash = Base64.getDecoder().decode(parts[1]);
