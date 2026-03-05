@@ -4,10 +4,7 @@ import com.luishbarros.discord_like.modules.collaboration.domain.error.RoomNotFo
 import com.luishbarros.discord_like.modules.collaboration.domain.error.UserNotInRoomError;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 public class RoomMembershipValidator {
@@ -18,11 +15,11 @@ public class RoomMembershipValidator {
         this.roomRepository = roomRepository;
     }
 
-    @Cacheable(
-            value = "rooms",
-            key = "#roomId",
-            unless = "#result == null"
-    )
+    /**
+     * Validates that a user is a member of a room and returns the room.
+     * Note: Cache is managed at the service layer (RoomService) to ensure
+     * consistent cache key strategy across the application.
+     */
     public Room validateAndGetRoom(Long roomId, Long userId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));

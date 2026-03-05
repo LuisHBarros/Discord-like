@@ -12,7 +12,7 @@ public class InviteFactory {
 
     public Invite create(Long roomId, Long createdByUserId, Instant now) {
         String codeValue = generateCode();
-        InviteCode code = new InviteCode(codeValue, createdByUserId);
+        InviteCode code = new InviteCode(codeValue);
         return new Invite(roomId, createdByUserId, code, now);
     }
 

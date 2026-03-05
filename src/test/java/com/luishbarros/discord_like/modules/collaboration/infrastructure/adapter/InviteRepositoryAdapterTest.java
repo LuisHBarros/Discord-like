@@ -30,7 +30,7 @@ class InviteRepositoryAdapterTest {
     @Test
     void save_returnsPersistedDomainInviteWithGeneratedId() {
         Instant now = Instant.parse("2026-01-01T00:00:00Z");
-        InviteCode code = new InviteCode("ABCD1234", 1L);
+        InviteCode code = new InviteCode("ABCD1234");
         Invite unsavedInvite = new Invite(10L, 1L, code, now);
 
         InviteJpaEntity persistedEntity = new InviteJpaEntity(

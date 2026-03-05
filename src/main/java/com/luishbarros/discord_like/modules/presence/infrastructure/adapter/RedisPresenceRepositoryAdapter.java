@@ -17,6 +17,7 @@ public class RedisPresenceRepositoryAdapter implements PresenceRepository {
 
     private static final String ONLINE_KEY = "presence:online";
     private static final String PRESENCE_KEY_PREFIX = "presence:user:";
+    private static final String STATE_KEY_PREFIX = "presence:state:";
 
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -27,6 +28,7 @@ public class RedisPresenceRepositoryAdapter implements PresenceRepository {
     @Override
     public UserPresence save(UserPresence presence) {
         String userIdKey = PRESENCE_KEY_PREFIX + presence.getUserId();
+        String stateKey = STATE_KEY_PREFIX + presence.getState().name();
 
         // Store presence data as hash
         Map<String, String> presenceData = new HashMap<>();
@@ -36,11 +38,22 @@ public class RedisPresenceRepositoryAdapter implements PresenceRepository {
 
         redisTemplate.opsForHash().putAll(userIdKey, presenceData);
 
+        // Add to state-specific set for efficient querying
+        redisTemplate.opsForSet().add(stateKey, String.valueOf(presence.getUserId()));
+
         // Add to online set if online
         if (presence.getState().isOnline()) {
             redisTemplate.opsForSet().add(ONLINE_KEY, String.valueOf(presence.getUserId()));
         } else {
             redisTemplate.opsForSet().remove(ONLINE_KEY, String.valueOf(presence.getUserId()));
+        }
+
+        // Remove from all other state sets
+        for (com.luishbarros.discord_like.modules.presence.domain.model.value_object.PresenceState state :
+                com.luishbarros.discord_like.modules.presence.domain.model.value_object.PresenceState.values()) {
+            if (!state.equals(presence.getState())) {
+                redisTemplate.opsForSet().remove(STATE_KEY_PREFIX + state.name(), String.valueOf(presence.getUserId()));
+            }
         }
 
         return presence;
@@ -65,23 +78,23 @@ public class RedisPresenceRepositoryAdapter implements PresenceRepository {
 
     @Override
     public Set<UserPresence> findByState(String state) {
-        // This is inefficient for Redis, but we'll iterate through all presence data
-        // In a production system, you'd want a different data structure
         Set<UserPresence> result = new HashSet<>();
-        Set<String> allKeys = redisTemplate.keys(PRESENCE_KEY_PREFIX + "*");
+        PresenceState presenceState = PresenceState.valueOf(state);
 
-        if (allKeys != null) {
-            for (String key : allKeys) {
-                Map<Object, Object> presenceData = redisTemplate.opsForHash().entries(key);
-                if (presenceData != null && !presenceData.isEmpty()) {
-                    PresenceState presenceState = PresenceState.valueOf((String) presenceData.get("state"));
-                    if (presenceState.name().equals(state)) {
-                        Long userId = Long.parseLong((String) presenceData.get("userId"));
-                        Instant lastSeen = Instant.parse((String) presenceData.get("lastSeen"));
-                        UserPresence presence = UserPresence.reconstitute(null, userId, presenceState, new LastSeen(lastSeen));
+        // Use state-specific set for efficient querying
+        String stateKey = STATE_KEY_PREFIX + state;
+        Set<String> userIds = redisTemplate.opsForSet().members(stateKey);
+
+        if (userIds != null && !userIds.isEmpty()) {
+            for (String userIdStr : userIds) {
+                Long userId = Long.parseLong(userIdStr);
+                Optional<UserPresence> presenceOpt = findByUserId(userId);
+                presenceOpt.ifPresent(presence -> {
+                    // Double-check the state to ensure consistency
+                    if (presence.getState().equals(presenceState)) {
                         result.add(presence);
                     }
-                }
+                });
             }
         }
 
@@ -98,7 +111,12 @@ public class RedisPresenceRepositoryAdapter implements PresenceRepository {
     @Override
     public void delete(UserPresence presence) {
         String userIdKey = PRESENCE_KEY_PREFIX + presence.getUserId();
+        String stateKey = STATE_KEY_PREFIX + presence.getState().name();
+
         redisTemplate.delete(userIdKey);
         redisTemplate.opsForSet().remove(ONLINE_KEY, String.valueOf(presence.getUserId()));
+
+        // Remove from state-specific set
+        redisTemplate.opsForSet().remove(stateKey, String.valueOf(presence.getUserId()));
     }
 }

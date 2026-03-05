@@ -60,17 +60,17 @@ class InviteServiceTest {
     }
 
     private Invite unsavedInvite() {
-        InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
+        InviteCode code = new InviteCode(CODE_VALUE);
         return new Invite(ROOM_ID, OWNER_ID, code, NOW);
     }
 
     private Invite validInvite() {
-        InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
+        InviteCode code = new InviteCode(CODE_VALUE);
         return Invite.reconstitute(INVITE_ID, ROOM_ID, OWNER_ID, code, NOW, NOW.plusSeconds(3600 * 24));
     }
 
     private Invite expiredInvite() {
-        InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
+        InviteCode code = new InviteCode(CODE_VALUE);
         return Invite.reconstitute(INVITE_ID, ROOM_ID, OWNER_ID, code, NOW.minusSeconds(3600 * 48), NOW.minusSeconds(1));
     }
 
@@ -201,7 +201,7 @@ class InviteServiceTest {
         @Test
         void givenInviteForDifferentRoom_throwsInvalidInviteCodeError() {
             Long otherRoomId = 99L;
-            InviteCode code = new InviteCode(CODE_VALUE, OWNER_ID);
+            InviteCode code = new InviteCode(CODE_VALUE);
             Invite inviteForOtherRoom = Invite.reconstitute(INVITE_ID, otherRoomId, OWNER_ID, code,
                     NOW, NOW.plusSeconds(3600 * 24));
 

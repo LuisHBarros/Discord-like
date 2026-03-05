@@ -109,8 +109,10 @@ public class AuthService {
             throw new InvalidCredentialsError("Current password is incorrect");
         }
 
-        user.changePassword(new PasswordHash(passwordHasher.hash(newPassword)), Instant.now());
+        Instant now = Instant.now();
+        user.changePassword(new PasswordHash(passwordHasher.hash(newPassword)), now);
         userRepository.save(user);
+        eventPublisher.publish(UserEvents.passwordChanged(user, now));
     }
 
     public void deactivate(Long userId) {

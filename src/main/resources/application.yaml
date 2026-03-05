@@ -46,7 +46,7 @@ spring:
         room-members: 5m
         users: 30m
         user-rooms: 10m
-      key-prefix: discord-like:
+      key-prefix: "discord-like:"
       cache-null-values: false
 
 server:
@@ -60,7 +60,7 @@ jwt:
 
 encryption:
   #secret: ${ENCRYPTION_SECRET}
-  secret: ${ENCRYPTION_SECRET:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+  secret: ${ENCRYPTION_SECRET:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 
 springdoc:
   api-docs:

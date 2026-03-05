@@ -51,7 +51,7 @@ public class InviteJpaEntity {
 
     // Mapping to domain model
     public Invite toDomain() {
-        InviteCode code = new InviteCode(this.codeValue, this.createdByUserId);
+        InviteCode code = new InviteCode(this.codeValue);
         return Invite.reconstitute(
                 this.id,
                 this.roomId,

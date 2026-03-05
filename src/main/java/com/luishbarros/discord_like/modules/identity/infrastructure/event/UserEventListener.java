@@ -24,7 +24,10 @@ public class UserEventListener implements EventListener<UserEvents> {
     }
 
     private void onPasswordChanged(UserEvents event) {
-        // futuro: enviar email de confirmação de troca de senha
+        // Log password change event for audit trail
+        // Future: enviar email de confirmação de troca de senha
+        // Future: invalidate all active sessions for security
+        // Future: notify user on connected WebSocket clients
     }
 
     private void onDeactivated(UserEvents event) {

@@ -27,7 +27,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final WebSocketSessionManager sessionManager;
     private final PresenceStore presenceStore;
     private final EventPublisher eventPublisher;
-    private static final String ID = "user_id";
+    public static final String ATTR_USER_ID = "userId";
 
     public ChatWebSocketHandler(
             MessageService messageService,
@@ -49,7 +49,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Extract user info from headers
         Long userId = extractUserId(session);
-        session.getAttributes().put(ID, userId);
+        session.getAttributes().put(ATTR_USER_ID, userId);
         presenceStore.setOnline(userId);
         sendConnectMessage(session, "Connected to chat server");
     }
@@ -73,7 +73,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws IOException {
-        Long userId = (Long) session.getAttributes().get(ID);
+        Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
         if (userId != null) {
             presenceStore.setOffline(userId);
         }
@@ -81,7 +81,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleChatMessage(WebSocketSession session, IncomingMessage payload) throws IOException {
-        Long userId = (Long) session.getAttributes().get(ID);
+        Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
 
         if (!userId.equals(payload.senderId())) {
             sendError(session, "unauthorized");
@@ -128,7 +128,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private Long extractUserId(WebSocketSession session) {
-        Long userId = (Long) session.getAttributes().get("userId");
+        Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
         if (userId == null) {
             throw new IllegalStateException("Unauthenticated WebSocket connection");
         }
