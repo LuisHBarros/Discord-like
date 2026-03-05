@@ -5,8 +5,10 @@ import com.luishbarros.discord_like.modules.collaboration.infrastructure.websock
 import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.ErrorResponse;
 import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.IncomingMessage;
 import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.OutgoingMessage;
+import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.event.WebSocketDistributionEvent;
 import com.luishbarros.discord_like.modules.collaboration.application.service.MessageService;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Message;
+import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import com.luishbarros.discord_like.shared.ports.PresenceStore;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -24,18 +26,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final WebSocketSessionManager sessionManager;
     private final PresenceStore presenceStore;
+    private final EventPublisher eventPublisher;
     private static final String ID = "user_id";
 
     public ChatWebSocketHandler(
             MessageService messageService,
             ObjectMapper objectMapper,
             WebSocketSessionManager sessionManager,
-            PresenceStore presenceStore
+            PresenceStore presenceStore,
+            EventPublisher eventPublisher
     ) {
         this.messageService = messageService;
         this.objectMapper = objectMapper;
         this.sessionManager = sessionManager;
         this.presenceStore = presenceStore;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -90,18 +95,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 Instant.now()
         );
 
-        OutgoingMessage response = new OutgoingMessage(
-                message.getId(),
-                payload.roomId(),
-                message.getSenderId(),
-                message.getContent().ciphertext(),
-                message.getCreatedAt()
+        // Publish WebSocket distribution event for cross-node broadcasting
+        WebSocketDistributionEvent distributionEvent = WebSocketDistributionEvent.chatMessage(
+            payload.roomId(),
+            payload.senderId(),
+            message.getContent().ciphertext(),
+            message.getCreatedAt()
         );
-
-        sessionManager.broadcastToRoom(
-                payload.roomId().toString(),
-                objectMapper.writeValueAsString(response)
-        );
+        eventPublisher.publish(distributionEvent);
     }
 
     private void handleJoinRoom(WebSocketSession session, Long roomId) throws IOException {

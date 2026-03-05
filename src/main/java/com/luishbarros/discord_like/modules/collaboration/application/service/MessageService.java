@@ -23,22 +23,35 @@ public class MessageService {
     private final EventPublisher eventPublisher;
     private final EncryptionService encryptionService;
     private final RoomMembershipValidator roomValidator;
+    private final E2EEKeyManagementService e2eeKeyManagementService;
 
     public MessageService(
             MessageRepository messageRepository,
             EventPublisher eventPublisher,
             EncryptionService encryptionService,
-            RoomMembershipValidator roomValidator
+            RoomMembershipValidator roomValidator,
+            E2EEKeyManagementService e2eeKeyManagementService
     ) {
         this.messageRepository = messageRepository;
         this.eventPublisher = eventPublisher;
         this.encryptionService = encryptionService;
         this.roomValidator = roomValidator;
+        this.e2eeKeyManagementService = e2eeKeyManagementService;
     }
 
-    public Message createMessage(Long senderId, Long roomId, String plaintext, Instant now) {
+    public Message createMessage(Long senderId, Long roomId, String content, Instant now) {
         roomValidator.validateAndGetRoom(roomId, senderId);
-        String ciphertext = encryptionService.encrypt(plaintext);
+
+        // Check if room uses E2EE
+        String ciphertext;
+        if (e2eeKeyManagementService.isE2EEEnabled(roomId)) {
+            // E2EE mode: content is already encrypted by client
+            ciphertext = content;
+        } else {
+            // Legacy mode: encrypt at-rest with AES-GCM
+            ciphertext = encryptionService.encrypt(content);
+        }
+
         Message message = new Message(senderId, roomId, new MessageContent(ciphertext), now);
         Message saved = messageRepository.save(message);
         eventPublisher.publish(MessageEvents.created(saved));

@@ -9,6 +9,9 @@ import com.luishbarros.discord_like.modules.collaboration.domain.model.value_obj
 import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.service.RoomMembershipValidator;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,19 +44,38 @@ public class RoomService {
         return saved;
     }
 
+    @Cacheable(
+            value = "rooms",
+            key = "#roomId + ':' + #userId",
+            unless = "#result == null"
+    )
     public Room findById(Long roomId, Long userId) {
         return membershipValidator.validateAndGetRoom(roomId, userId);
     }
 
+    @Cacheable(
+            value = "user-rooms",
+            key = "#userId",
+            unless = "#result == null || #result.isEmpty()"
+    )
     public List<Room> findByMemberId(Long userId) {
         return roomRepository.findByMemberId(userId);
     }
 
+    @Cacheable(
+            value = "room-members",
+            key = "#roomId",
+            unless = "#result == null || #result.isEmpty()"
+    )
     public Set<Long> getMembers(Long roomId, Long userId) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         return room.getMemberIds();
     }
 
+    @CachePut(
+            value = "rooms",
+            key = "#roomId + ':' + #userId"
+    )
     public Room updateRoomName(Long roomId, Long userId, String newName, Instant now) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         validateOwnership(room, userId);
@@ -63,6 +85,10 @@ public class RoomService {
         return room;
     }
 
+    @CacheEvict(
+            value = {"rooms", "room-members", "user-rooms"},
+            key = "#roomId"
+    )
     public void deleteRoom(Long roomId, Long userId, Instant now) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         validateOwnership(room, userId);
@@ -70,6 +96,10 @@ public class RoomService {
         eventPublisher.publish(RoomEvents.roomDeleted(roomId, userId, now));
     }
 
+    @CacheEvict(
+            value = {"room-members", "user-rooms"},
+            key = "#roomId"
+    )
     public void addMember(Long roomId, Long invitedUserId, Instant now) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
@@ -78,6 +108,10 @@ public class RoomService {
         eventPublisher.publish(RoomEvents.memberJoined(roomId, invitedUserId, now));
     }
 
+    @CacheEvict(
+            value = {"room-members", "user-rooms"},
+            key = "#roomId"
+    )
     public void removeMember(Long roomId, Long userId, Long targetUserId, Instant now) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         validateOwnership(room, userId);
@@ -86,6 +120,10 @@ public class RoomService {
         eventPublisher.publish(RoomEvents.memberLeft(roomId, targetUserId, now));
     }
 
+    @CacheEvict(
+            value = {"room-members", "user-rooms"},
+            key = "#roomId"
+    )
     public void leaveRoom(Long roomId, Long userId, Instant now) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         if (room.isOwner(userId)) {

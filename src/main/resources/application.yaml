@@ -37,6 +37,18 @@ spring:
       properties:
         spring.json.trusted.packages: "com.luishbarros.discord_like.*"
 
+  cache:
+    type: redis
+    redis:
+      time-to-live:
+        default: 30m
+        rooms: 1h
+        room-members: 5m
+        users: 30m
+        user-rooms: 10m
+      key-prefix: discord-like:
+      cache-null-values: false
+
 server:
   port: 8000
 
@@ -56,3 +68,34 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
+
+# === Observabilidade ===
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: discord-like
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: 0.1 # 10% sampling em produção
+    propagation:
+      type: w3c
+
+# === E2EE ===
+e2ee:
+  enabled: ${E2EE_ENABLED:false} # Feature flag
+  key-rotation:
+    interval: 1d
+    members-threshold: 10
+  signal-protocol:
+    curve: X25519
+    key-length: 256

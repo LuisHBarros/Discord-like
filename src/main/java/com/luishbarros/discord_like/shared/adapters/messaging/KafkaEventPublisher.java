@@ -21,11 +21,14 @@ public class KafkaEventPublisher implements EventPublisher {
 
     private String getTopicForEvent(Object event) {
         return switch (event.getClass().getSimpleName()) {
-            case "RoomEvents"     -> "room-events";
-            case "MessageEvents"  -> "message-events";
-            case "InviteEvents"   -> "invite-events";
-            case "UserEvents"     -> "user-events";
-            default               -> "domain-events";
+            case "RoomEvents"                -> "room-events";
+            case "MessageEvents"             -> "message-events";
+            case "InviteEvents"              -> "invite-events";
+            case "UserEvents"                -> "user-events";
+            case "PresenceEvents"            -> "presence-events";
+            case "WebSocketDistributionEvent"-> "websocket-distribution-events";
+            case "CacheInvalidationEvent"    -> "cache-invalidation-events";
+            default                          -> "domain-events";
         };
     }
 }
