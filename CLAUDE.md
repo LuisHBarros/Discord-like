@@ -29,7 +29,7 @@ On Windows, use `gradlew.bat` instead of `./gradlew`.
 
 ## Architecture
 
-The project follows **Hexagonal Architecture (Ports & Adapters)** with **feature-based modules**.
+The project follows **Hexagonal Architecture (Ports & Adapters)** with **Domain-Driven Design** principles, organized into **feature-based bounded contexts**.
 
 ### Dependency Flow
 
@@ -42,21 +42,31 @@ Infrastructure → Ports ← Application ← Domain
 - Application services orchestrate domain logic via ports
 - Infrastructure provides concrete implementations
 
-### Module: `auth`
+### Bounded Contexts
+
+The project has three bounded contexts:
+
+1. **Identity** — Authentication, user management, and authorization
+2. **Collaboration** — Rooms, messaging, and invites
+3. **Presence** — User online status and activity tracking
+
+### Module: `identity`
 
 ```
-modules/auth/
+modules/identity/
 ├── application/
 │   ├── dto/           # LoginRequest, RegisterRequest, RefreshRequest, AuthResponse,
 │   │                  # UserResponse, ChangePasswordRequest
 │   └── service/       # AuthService, UserService
 ├── domain/
 │   ├── event/         # UserEvents (REGISTERED, PASSWORD_CHANGED, DEACTIVATED, ACTIVATED)
-│   └── model/         # User (changePassword, activate, deactivate)
-│       └── error/     # InvalidCredentialsError, InvalidTokenError, UserNotFoundError,
-│                      # DuplicateEmailError, InvalidUserError
+│   ├── model/
+│   │   ├── error/     # InvalidCredentialsError, InvalidTokenError, UserNotFoundError,
+│   │   │              # DuplicateEmailError, InvalidUserError
+│   │   └── value_object/  # Username, Email, PasswordHash
 │   └── ports/
-│       └── repository/ # UserRepository
+│       ├── repository/    # UserRepository
+│       └── other/         # PasswordHasher, TokenProvider, TokenBlacklist
 └── infrastructure/
     ├── adapters/      # JpaUserRepository (domain port adapter)
     ├── event/         # UserEventListener (Kafka consumer, user-events topic)
@@ -69,10 +79,10 @@ modules/auth/
                        # RedisTokenBlacklist (@Primary)
 ```
 
-### Module: `chat`
+### Module: `collaboration`
 
 ```
-modules/chat/
+modules/collaboration/
 ├── application/
 │   ├── dto/           # CreateRoomRequest, UpdateRoomRequest, JoinRoomRequest,
 │   │                  # SendMessageRequest, RoomResponse, MessageResponse,
@@ -84,11 +94,12 @@ modules/chat/
 │   │                  # InvalidMessageError, RoomNotFoundError, UserNotInRoomError,
 │   │                  # EncryptionException
 │   ├── event/         # RoomEvents, MessageEvents, InviteEvents (static factory methods)
-│   ├── model/         # Room, Message, Invite
-│   │   └── value_object/  # InviteCode (record)
+│   ├── model/
+│   │   ├── aggregate/  # Room, Message, Invite
+│   │   └── value_object/  # InviteCode, MessageContent, RoomName, Membership
 │   ├── ports/         # EncryptionService
 │   │   └── repository/    # RoomRepository, MessageRepository, InviteRepository
-│   └── service/       # RoomMembershipValidator (domain service)
+│   └── service/       # RoomAccessPolicy, MessageDeliveryPolicy, RoomMembershipValidator
 └── infrastructure/
     ├── adapter/       # RoomRepositoryAdapter, MessageRepositoryAdapter, InviteRepositoryAdapter
     ├── encryption/    # AesEncryptionService (AES/GCM/NoPadding, random 12-byte IV,
@@ -101,6 +112,30 @@ modules/chat/
         └── repository/ # RoomJpaRepository, MessageJpaRepository, InviteJpaRepository
 ```
 
+### Module: `presence`
+
+```
+modules/presence/
+├── application/
+│   ├── dto/           # PresenceStatus
+│   ├── ports/
+│   │   └── in/        # TrackPresenceUseCase, QueryPresenceUseCase
+│   └── service/       # PresenceService
+├── domain/
+│   ├── event/         # PresenceEvents (USER_CAME_ONLINE, USER_WENT_OFFLINE, USER_STATE_CHANGED)
+│   ├── model/
+│   │   ├── aggregate/  # UserPresence
+│   │   ├── error/       # InvalidPresenceError
+│   │   └── value_object/ # PresenceState, LastSeen
+│   ├── ports/
+│   │   └── repository/    # PresenceRepository
+│   └── service/       # PresencePolicy, DefaultPresencePolicy
+└── infrastructure/
+    ├── adapter/       # InMemoryPresenceRepository, RedisPresenceRepositoryAdapter
+    ├── event/         # PresenceEventListener (Kafka consumer)
+    └── http/          # PresenceController
+```
+
 ### Shared
 
 ```
@@ -110,7 +145,7 @@ shared/
 │   ├── http/        # HealthController
 │   ├── messaging/   # KafkaEventPublisher, KafkaBroadcaster
 │   ├── middleware/  # DomainErrorHandler (@RestControllerAdvice)
-│   ├── presence/    # RedisPresenceStore
+│   ├── presence/    # RedisPresenceStore, InMemoryRateLimiter
 │   └── ratelimit/   # RedisRateLimiter, RateLimitedAuthService
 ├── domain/
 │   ├── error/       # DomainError (abstract base), RateLimitError
@@ -120,13 +155,13 @@ shared/
 
 ### Key Patterns
 
-**Domain reconstitution:** `Room`, `Message`, `Invite`, and `User` domain objects use a `static reconstitute(id, ...)` factory method for restoring persisted state. The regular constructor initialises a fresh aggregate (id starts as null until persisted). JPA entities call `reconstitute()` in `toDomain()`, and adapters always return `jpaRepository.save(...).toDomain()` so the caller receives the DB-generated ID.
+**Domain reconstitution:** `Room`, `Message`, `Invite`, `User`, and `UserPresence` domain objects use a `static reconstitute(id, ...)` factory method for restoring persisted state. The regular constructor initialises a fresh aggregate (id starts as null until persisted). JPA entities call `reconstitute()` in `toDomain()`, and adapters always return `jpaRepository.save(...).toDomain()` so the caller receives the DB-generated ID.
 
 **Domain errors:** All domain errors extend `DomainError(code, message)` and are caught globally by `DomainErrorHandler`. Add new error classes by extending `DomainError` and registering the code in `DomainErrorHandler.mapErrorToStatus()`. Static factory methods (e.g. `InvalidMessageError.emptyContent()`) are preferred over raw constructors for named error cases.
 
 **Message encryption:** `MessageService` encrypts plaintext with `EncryptionService.encrypt()` before persisting. The stored and transmitted value is always ciphertext. `AesEncryptionService` uses AES/GCM/NoPadding with a random 12-byte IV prepended to each ciphertext.
 
-**Event publishing:** `KafkaEventPublisher` (in `shared/adapters/messaging/`) routes events to Kafka topics based on the event's class simple name: `RoomEvents` → `room-events`, `MessageEvents` → `message-events`, `InviteEvents` → `invite-events`, `UserEvents` → `user-events`.
+**Event publishing:** `KafkaEventPublisher` (in `shared/adapters/messaging/`) routes events to Kafka topics based on the event's class simple name: `RoomEvents` → `room-events`, `MessageEvents` → `message-events`, `InviteEvents` → `invite-events`, `UserEvents` → `user-events`, `PresenceEvents` → `presence-events`.
 
 **Event consuming:** Each domain area has a dedicated `*EventListener` Kafka consumer in `infrastructure/event/` that deserializes events and broadcasts them to WebSocket clients via the `Broadcaster` port.
 
@@ -134,9 +169,15 @@ shared/
 
 **Invite flow:** `InviteFactory` creates an `Invite` with an 8-char UUID-derived code and a 24-hour TTL. `InviteService.acceptInvite()` validates expiry, then delegates to `RoomService.addMember()`.
 
-**Presence:** `RedisPresenceStore` tracks online users in a Redis Set (`presence:online`) via SADD/SREM/SISMEMBER/SMEMBERS. Set online on WebSocket connect, offline on disconnect.
+**Presence tracking:** The `presence` module uses `PresenceService` to track user states (ONLINE, OFFLINE, IDLE, DO_NOT_DISTURB). Presence is stored in Redis via `RedisPresenceRepositoryAdapter`. Presence events are published to `presence-events` topic and consumed by `PresenceEventListener`. Presence state changes are also broadcast to WebSocket clients.
+
+**Presence integration with WebSocket:** Set online on WebSocket connect via `PresenceService.setOnline(userId)`, offline on disconnect via `PresenceService.setOffline(userId)`. The `RedisPresenceStore` tracks online users in a Redis Set (`presence:online`) via SADD/SREM/SISMEMBER/SMEMBERS.
 
 **WebSocket session management:** `WebSocketSessionManager` keeps an in-memory `ConcurrentHashMap` of sessions per room. `broadcastToRoom` iterates over a `List.copyOf` snapshot and removes stale/closed sessions inline, cleaning up empty room entries automatically.
+
+**Domain policies:** The `collaboration` module uses policy interfaces (`RoomAccessPolicy`, `MessageDeliveryPolicy`) to encapsulate cross-cutting domain rules. `DefaultRoomAccessPolicy` and `DefaultMessageDeliveryPolicy` provide the standard implementations. This allows for easy extension and testing of access control and message delivery logic.
+
+**Use case ports:** The `presence` module demonstrates the use case pattern with `TrackPresenceUseCase` and `QueryPresenceUseCase` interfaces in `application/ports/in/`. Application services implement these use case ports, providing a clear contract for interaction.
 
 ## Key Technologies
 
@@ -173,6 +214,15 @@ shared/
 - `POST /rooms/{id}/invite/regenerate` — Generate new invite
 - `GET /rooms/{id}/members` — List member IDs
 - `DELETE /rooms/{id}/members/{memberId}` — Kick member (owner only)
+
+### Presence (`/presence`)
+- `GET /presence/{userId}` — Get user's presence status
+- `GET /presence/online` — List all online users with status
+- `GET /presence/online/ids` — List online user IDs only
+- `POST /presence/{userId}/online` — Set user online
+- `POST /presence/{userId}/offline` — Set user offline
+- `POST /presence/{userId}/state` — Set user presence state (ONLINE, OFFLINE, IDLE, DO_NOT_DISTURB)
+- `POST /presence/{userId}/activity` — Update last activity timestamp
 
 ### Messages (`/rooms/{roomId}/messages`)
 - `POST /rooms/{roomId}/messages` — Send message (plaintext in, ciphertext stored)
@@ -211,7 +261,7 @@ JWT access token TTL: 15 minutes. Refresh token TTL: 7 days. Server port: `8000`
 
 | Code | Status |
 |---|---|
-| `INVALID_CREDENTIALS`, `UNAUTHORIZED`, `INVALID_TOKEN` | 401 |
+| `INVALID_CREDENTIALS`, `UNAUTHORIZED` | 401 |
 | `FORBIDDEN`, `USER_NOT_IN_ROOM` | 403 |
 | `NOT_FOUND`, `ROOM_NOT_FOUND`, `USER_NOT_FOUND`, `MESSAGE_NOT_FOUND` | 404 |
 | `DUPLICATE_EMAIL`, `CONFLICT` | 409 |
@@ -221,11 +271,18 @@ JWT access token TTL: 15 minutes. Refresh token TTL: 7 days. Server port: `8000`
 
 `MethodArgumentNotValidException` (Spring `@Valid` failures) is also caught and returned as `VALIDATION_ERROR` / 400, with field-level messages joined by `; `.
 
+## Additional Documentation
+
+Comprehensive architecture documentation is available in the `docs/` folder:
+- **docs/README.md** — Main documentation index with architecture diagrams
+- **docs/architecture/** — Detailed architecture documentation covering hexagonal architecture, bounded contexts, aggregates, value objects, domain events, repositories, and design patterns
+- **docs/development/** — Development guides for project structure and testing
+
 ## Test Coverage
 
 | Layer | Classes |
 |---|---|
-| Application services | `AuthServiceTest`, `UserServiceTest`, `RoomServiceTest`, `MessageServiceTest`, `InviteServiceTest` |
+| Application services | `AuthServiceTest`, `UserServiceTest`, `RoomServiceTest`, `MessageServiceTest`, `InviteServiceTest`, `PresenceServiceTest` |
 | Infrastructure adapters | `InviteRepositoryAdapterTest`, `RoomJpaRepositoryTest` |
 | WebSocket | `WebSocketSessionManagerTest` |
 | Middleware | `DomainErrorHandlerTest` |

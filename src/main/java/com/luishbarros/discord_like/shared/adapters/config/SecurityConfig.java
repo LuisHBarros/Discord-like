@@ -1,7 +1,7 @@
 // shared/adapters/config/SecurityConfig.java
 package com.luishbarros.discord_like.shared.adapters.config;
 
-import com.luishbarros.discord_like.modules.auth.infrastructure.security.JwtFilter;
+import com.luishbarros.discord_like.modules.identity.infrastructure.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;

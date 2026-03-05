@@ -1,8 +1,8 @@
 // shared/adapters/ratelimit/RateLimitedAuthService.java
 package com.luishbarros.discord_like.shared.adapters.ratelimit;
 
-import com.luishbarros.discord_like.modules.auth.application.dto.*;
-import com.luishbarros.discord_like.modules.auth.application.service.AuthService;
+import com.luishbarros.discord_like.modules.identity.application.dto.*;
+import com.luishbarros.discord_like.modules.identity.application.service.AuthService;
 import com.luishbarros.discord_like.shared.domain.error.RateLimitError;
 import com.luishbarros.discord_like.shared.ports.RateLimiter;
 import org.springframework.context.annotation.Primary;

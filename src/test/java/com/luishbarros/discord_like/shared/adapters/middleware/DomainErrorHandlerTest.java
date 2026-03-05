@@ -1,10 +1,10 @@
 package com.luishbarros.discord_like.shared.adapters.middleware;
 
-import com.luishbarros.discord_like.modules.auth.domain.model.error.InvalidUserError;
-import com.luishbarros.discord_like.modules.chat.domain.error.EncryptionException;
-import com.luishbarros.discord_like.modules.chat.domain.error.InvalidInviteCodeError;
-import com.luishbarros.discord_like.modules.chat.domain.error.InvalidMessageError;
-import com.luishbarros.discord_like.modules.chat.domain.error.InvalidRoomError;
+import com.luishbarros.discord_like.modules.identity.domain.model.error.InvalidUserError;
+import com.luishbarros.discord_like.modules.collaboration.domain.error.EncryptionException;
+import com.luishbarros.discord_like.modules.collaboration.domain.error.InvalidInviteCodeError;
+import com.luishbarros.discord_like.modules.collaboration.domain.error.InvalidMessageError;
+import com.luishbarros.discord_like.modules.collaboration.domain.error.InvalidRoomError;
 import com.luishbarros.discord_like.shared.domain.error.DomainError;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
