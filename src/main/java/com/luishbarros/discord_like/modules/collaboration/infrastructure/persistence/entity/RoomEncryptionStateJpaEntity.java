@@ -33,11 +33,12 @@ public class RoomEncryptionStateJpaEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    protected RoomEncryptionStateJpaEntity() {}
+    protected RoomEncryptionStateJpaEntity() {
+    }
 
     public RoomEncryptionStateJpaEntity(Long roomId, RoomEncryptionState.EncryptionMode mode,
-                                       byte[] roomPublicKey, byte[] encryptedRoomKey,
-                                       Instant keyRotatedAt, Instant createdAt) {
+            byte[] roomPublicKey, byte[] encryptedRoomKey,
+            Instant keyRotatedAt, Instant createdAt) {
         this.roomId = roomId;
         this.mode = mode;
         this.roomPublicKey = roomPublicKey;
@@ -46,13 +47,33 @@ public class RoomEncryptionStateJpaEntity {
         this.createdAt = createdAt;
     }
 
-    public Long getId() { return id; }
-    public Long getRoomId() { return roomId; }
-    public RoomEncryptionState.EncryptionMode getMode() { return mode; }
-    public byte[] getRoomPublicKey() { return roomPublicKey; }
-    public byte[] getEncryptedRoomKey() { return encryptedRoomKey; }
-    public Instant getKeyRotatedAt() { return keyRotatedAt; }
-    public Instant getCreatedAt() { return createdAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public Long getRoomId() {
+        return roomId;
+    }
+
+    public RoomEncryptionState.EncryptionMode getMode() {
+        return mode;
+    }
+
+    public byte[] getRoomPublicKey() {
+        return roomPublicKey;
+    }
+
+    public byte[] getEncryptedRoomKey() {
+        return encryptedRoomKey;
+    }
+
+    public Instant getKeyRotatedAt() {
+        return keyRotatedAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 
     // Mapping to domain model
     public RoomEncryptionState toDomain() {
@@ -63,19 +84,19 @@ public class RoomEncryptionStateJpaEntity {
                 this.roomPublicKey,
                 this.encryptedRoomKey,
                 this.keyRotatedAt,
-                this.createdAt
-        );
+                this.createdAt);
     }
 
     // Mapping from domain model
     public static RoomEncryptionStateJpaEntity fromDomain(RoomEncryptionState state) {
-        return new RoomEncryptionStateJpaEntity(
+        RoomEncryptionStateJpaEntity entity = new RoomEncryptionStateJpaEntity(
                 state.roomId(),
                 state.mode(),
                 state.roomPublicKey(),
                 state.encryptedRoomKey(),
                 state.keyRotatedAt(),
-                state.createdAt()
-        );
+                state.createdAt());
+        entity.id = state.getId();
+        return entity;
     }
 }

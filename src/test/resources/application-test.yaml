@@ -1,0 +1,19 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: false
+  cache:
+    type: redis  # host/port sobrescritos via @DynamicPropertySource
+
+jwt:
+  access-secret: test-secret-key-for-tests-only-must-be-256-bits-x
+  refresh-secret: test-secret-key-for-tests-only-must-be-256-bits-x
+  access-expiration-ms: 900000
+  refresh-expiration-ms: 604800000
+
+encryption:
+  secret: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=

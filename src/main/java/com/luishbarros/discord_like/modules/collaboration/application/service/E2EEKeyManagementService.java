@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.*;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.security.*;
 import java.time.Instant;
 import java.util.Arrays;
@@ -47,7 +48,7 @@ public class E2EEKeyManagementService {
      */
     @Transactional
     public RoomEncryptionState enableE2EE(Long roomId, Long ownerId,
-                                        byte[] ownerPublicKey) {
+            byte[] ownerPublicKey) {
         try {
             validateKeySize(ownerPublicKey, "owner public key");
 
@@ -60,11 +61,13 @@ public class E2EEKeyManagementService {
             // Generate ephemeral key pair for this room
             KeyPair ephemeralKeyPair = generateKeyPair();
 
+            byte[] rawPublicKey = extractRawX25519KeyBytes(
+                    ephemeralKeyPair.getPublic().getEncoded());
+
             RoomEncryptionState state = RoomEncryptionState.createE2EE(
                     roomId,
-                    ephemeralKeyPair.getPublic().getEncoded(),
-                    encryptedRoomKey
-            );
+                    rawPublicKey,
+                    encryptedRoomKey);
 
             log.info("E2EE enabled for room {} by owner {}", roomId, ownerId);
             return encryptionStateRepository.save(state);
@@ -117,14 +120,16 @@ public class E2EEKeyManagementService {
             // Generate new ephemeral key pair
             KeyPair newEphemeralKeyPair = generateKeyPair();
 
+            byte[] rawPublicKey = extractRawX25519KeyBytes(
+                    newEphemeralKeyPair.getPublic().getEncoded());
+
             // In production: encrypt for all members and distribute
             // For now, encrypt with room's public key (simplified)
             byte[] encryptedRoomKey = encryptRoomKeyForUser(newRoomKey, state.roomPublicKey());
 
             RoomEncryptionState newState = state.rotateKey(
-                    newEphemeralKeyPair.getPublic().getEncoded(),
-                    encryptedRoomKey
-            );
+                    rawPublicKey,
+                    encryptedRoomKey);
 
             log.info("Rotated room key for room {}", roomId);
             return encryptionStateRepository.save(newState);
@@ -135,12 +140,28 @@ public class E2EEKeyManagementService {
     }
 
     /**
+     * Extract raw X25519 key bytes from encoded public key.
+     * X25519 keys are 32 bytes, but getEncoded() may include ASN.1 metadata.
+     */
+    private byte[] extractRawX25519KeyBytes(byte[] encodedKey) throws IOException {
+        if (encodedKey.length == 32) {
+            return encodedKey;
+        }
+        // Extract raw 32-byte key from ASN.1 encoded format
+        // For X25519, the raw key is typically at the end of the structure
+        int start = encodedKey.length - 32;
+        byte[] rawKey = new byte[32];
+        System.arraycopy(encodedKey, start, rawKey, 0, 32);
+        return rawKey;
+    }
+
+    /**
      * Encrypt room symmetric key for a specific user using ECDH.
      * This uses a simplified approach - in production, you would:
      * 1. Generate ephemeral key pair
      * 2. Perform ECDH key exchange with user's public key
      * 3. Derive a symmetric key from the shared secret
-     * 4. Encrypt the room key with the derived key using AES-GCM
+     * 4. Encrypt room key with the derived key using AES-GCM
      */
     private byte[] encryptRoomKeyForUser(byte[] roomKey, byte[] userPublicKey) throws Exception {
         // Validate input
@@ -166,10 +187,12 @@ public class E2EEKeyManagementService {
         byte[] encryptedRoomKey = cipher.doFinal(roomKey);
 
         // Combine IV + ephemeral public key + encrypted data
-        byte[] result = new byte[GCM_IV_LENGTH + KEY_SIZE + encryptedRoomKey.length];
+        byte[] rawPublicKeyBytes = extractRawX25519KeyBytes(
+                ephemeralKeyPair.getPublic().getEncoded());
+        byte[] result = new byte[GCM_IV_LENGTH + rawPublicKeyBytes.length + encryptedRoomKey.length];
         System.arraycopy(iv, 0, result, 0, GCM_IV_LENGTH);
-        System.arraycopy(ephemeralKeyPair.getPublic().getEncoded(), 0, result, GCM_IV_LENGTH, KEY_SIZE);
-        System.arraycopy(encryptedRoomKey, 0, result, GCM_IV_LENGTH + KEY_SIZE, encryptedRoomKey.length);
+        System.arraycopy(rawPublicKeyBytes, 0, result, GCM_IV_LENGTH, rawPublicKeyBytes.length);
+        System.arraycopy(encryptedRoomKey, 0, result, GCM_IV_LENGTH + rawPublicKeyBytes.length, encryptedRoomKey.length);
 
         return result;
     }

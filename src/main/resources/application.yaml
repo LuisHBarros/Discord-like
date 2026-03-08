@@ -59,8 +59,7 @@ jwt:
   refresh-expiration-ms: 604800000  # 7 days
 
 encryption:
-  #secret: ${ENCRYPTION_SECRET}
-  secret: ${ENCRYPTION_SECRET:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  secret: ${ENCRYPTION_SECRET:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
 
 springdoc:
   api-docs:
@@ -69,7 +68,6 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
 
-# === Observabilidade ===
 management:
   endpoints:
     web:
@@ -86,13 +84,12 @@ management:
         http.server.requests: true
   tracing:
     sampling:
-      probability: 0.1 # 10% sampling em produção
+      probability: 0.1
     propagation:
       type: w3c
 
-# === E2EE ===
 e2ee:
-  enabled: ${E2EE_ENABLED:false} # Feature flag
+  enabled: ${E2EE_ENABLED:false}
   key-rotation:
     interval: 1d
     members-threshold: 10

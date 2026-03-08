@@ -88,28 +88,34 @@ modules/collaboration/
 │   │                  # SendMessageRequest, RoomResponse, MessageResponse,
 │   │                  # InviteResponse, UpdateMessageRequest
 │   ├── factory/       # InviteFactory (generates 8-char uppercase invite codes)
-│   └── service/       # RoomService, MessageService, InviteService
+│   └── service/       # RoomService, MessageService, InviteService,
+│                      # E2EEKeyManagementService, ConversationService
 ├── domain/
 │   ├── error/         # InvalidRoomError, ForbiddenError, InvalidInviteCodeError,
 │   │                  # InvalidMessageError, RoomNotFoundError, UserNotInRoomError,
 │   │                  # EncryptionException
 │   ├── event/         # RoomEvents, MessageEvents, InviteEvents (static factory methods)
 │   ├── model/
-│   │   ├── aggregate/  # Room, Message, Invite
+│   │   ├── aggregate/  # Room, Message, Invite, Conversation
+│   │   ├── error/       # RoomEncryptionError
 │   │   └── value_object/  # InviteCode, MessageContent, RoomName, Membership
-│   ├── ports/         # EncryptionService
+│   ├── ports/         # EncryptionService, RoomEncryptionStateRepository, ConversationRepository
 │   │   └── repository/    # RoomRepository, MessageRepository, InviteRepository
 │   └── service/       # RoomAccessPolicy, MessageDeliveryPolicy, RoomMembershipValidator
 └── infrastructure/
-    ├── adapter/       # RoomRepositoryAdapter, MessageRepositoryAdapter, InviteRepositoryAdapter
+    ├── adapter/       # RoomRepositoryAdapter, MessageRepositoryAdapter, InviteRepositoryAdapter,
+    │                  # RoomEncryptionStateRepositoryAdapter, ConversationRepositoryAdapter
     ├── encryption/    # AesEncryptionService (AES/GCM/NoPadding, random 12-byte IV,
-    │                  # IV prepended to ciphertext, key from ENCRYPTION_SECRET env var)
+    │                  # IV prepended to ciphertext, key from ENCRYPTION_SECRET env var),
+    │                  # E2EEKeyManagementService (X25519 key exchange, key rotation)
     ├── event/         # InviteEventListener, MessageEventListener, RoomEventListener
     │                  # (Kafka consumers → broadcast to WebSocket)
-    ├── http/          # RoomController, MessageController
+    ├── http/          # RoomController, MessageController, E2EEController
     └── persistence/
-        ├── entity/    # RoomJpaEntity, MessageJpaEntity, InviteJpaEntity
-        └── repository/ # RoomJpaRepository, MessageJpaRepository, InviteJpaRepository
+        ├── entity/    # RoomJpaEntity, MessageJpaEntity, InviteJpaEntity,
+        │              # RoomEncryptionStateJpaEntity, ConversationJpaEntity
+        └── repository/ # RoomJpaRepository, MessageJpaRepository, InviteJpaRepository,
+                        # RoomEncryptionStateJpaRepository, ConversationJpaRepository
 ```
 
 ### Module: `presence`
@@ -282,9 +288,13 @@ Comprehensive architecture documentation is available in the `docs/` folder:
 
 | Layer | Classes |
 |---|---|
-| Application services | `AuthServiceTest`, `UserServiceTest`, `RoomServiceTest`, `MessageServiceTest`, `InviteServiceTest`, `PresenceServiceTest` |
-| Infrastructure adapters | `InviteRepositoryAdapterTest`, `RoomJpaRepositoryTest` |
-| WebSocket | `WebSocketSessionManagerTest` |
+| Application services | `AuthServiceTest`, `UserServiceTest`, `RoomServiceTest`, `MessageServiceTest`, `InviteServiceTest`, `PresenceServiceTest`, `E2EEKeyManagementServiceTest`, `ConversationServiceTest` |
+| Infrastructure adapters | `InviteRepositoryAdapterTest`, `RoomJpaRepositoryTest`, `ConversationRepositoryAdapterTest` |
+| WebSocket | `WebSocketSessionManagerTest`, `ChatWebSocketHandlerTest` |
 | Middleware | `DomainErrorHandlerTest` |
+| Domain models | `RoomTest`, `MessageTest`, `InviteTest`, `UserTest`, `UserPresenceTest`, `ConversationTest` |
+| Cache & Tracing | `RoomServiceCacheTest`, `TracingConfigTest` |
 
-All unit tests use Mockito + AssertJ. Integration tests with Testcontainers are not yet implemented.
+**Test Coverage: 97.6% (165/169 tests passing)**
+
+Integration tests use Testcontainers with PostgreSQL, Redis, and Kafka. Testcontainers configuration uses `withReuse(false)` to ensure test isolation.

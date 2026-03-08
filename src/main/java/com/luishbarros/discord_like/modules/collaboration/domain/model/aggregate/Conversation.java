@@ -17,6 +17,8 @@ public class Conversation extends BaseEntity {
     private Long roomId;
     private final SortedSet<Message> messages = new TreeSet<>((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
     private Instant lastActivityAt;
+    private Instant createdAt;
+    private Instant updatedAt;
     private static final int MAX_MESSAGES = 10000;
 
     protected Conversation() {}
@@ -24,14 +26,22 @@ public class Conversation extends BaseEntity {
     public Conversation(Long roomId, Instant createdAt) {
         this.roomId = roomId;
         this.lastActivityAt = createdAt;
+        this.createdAt = createdAt;
+        this.updatedAt = createdAt;
     }
 
     public static Conversation reconstitute(Long id, Long roomId, SortedSet<Message> messages, Instant lastActivityAt) {
+        return reconstitute(id, roomId, messages, lastActivityAt, lastActivityAt, lastActivityAt);
+    }
+
+    public static Conversation reconstitute(Long id, Long roomId, SortedSet<Message> messages, Instant lastActivityAt, Instant createdAt, Instant updatedAt) {
         Conversation conversation = new Conversation();
         conversation.id = id;
         conversation.roomId = roomId;
         conversation.messages.addAll(messages);
         conversation.lastActivityAt = lastActivityAt;
+        conversation.createdAt = createdAt;
+        conversation.updatedAt = updatedAt;
         return conversation;
     }
 
@@ -41,6 +51,7 @@ public class Conversation extends BaseEntity {
         }
         messages.add(message);
         this.lastActivityAt = now;
+        this.updatedAt = now;
     }
 
     public void updateMessage(Long messageId, MessageContent newContent, Instant now) {
@@ -48,6 +59,7 @@ public class Conversation extends BaseEntity {
             .orElseThrow(() -> new RoomNotFoundError("Message not found"));
         message.edit(newContent, now);
         this.lastActivityAt = now;
+        this.updatedAt = now;
     }
 
     public void deleteMessage(Long messageId, Instant now) {
@@ -55,6 +67,7 @@ public class Conversation extends BaseEntity {
             .orElseThrow(() -> new RoomNotFoundError("Message not found"));
         messages.remove(message);
         this.lastActivityAt = now;
+        this.updatedAt = now;
     }
 
     public List<Message> getMessages(int limit, int offset) {
@@ -97,4 +110,8 @@ public class Conversation extends BaseEntity {
     public SortedSet<Message> getMessages() { return java.util.Collections.unmodifiableSortedSet(messages); }
     public Instant getLastActivityAt() { return lastActivityAt; }
     public int getMessageCount() { return messages.size(); }
+
+    // Timestamp getters (inherited from BaseEntity, but provided here for clarity)
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

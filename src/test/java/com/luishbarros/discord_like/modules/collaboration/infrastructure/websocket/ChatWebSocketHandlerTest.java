@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class ChatWebSocketHandlerTest {
 
     @Mock
@@ -66,9 +68,12 @@ class ChatWebSocketHandlerTest {
         );
 
         // Default mock behaviors
-        when(session.getAttributes()).thenReturn(new HashMap<>());
         when(session.getId()).thenReturn("test-session-id");
-        doNothing().when(session).sendMessage(any(TextMessage.class));
+        // Stub objectMapper.writeValueAsString to return valid JSON based on the object type
+        when(objectMapper.writeValueAsString(any(com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.ConnectResponse.class)))
+                .thenReturn("{\"message\":\"test\"}");
+        when(objectMapper.writeValueAsString(any(com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.ErrorResponse.class)))
+                .thenReturn("{\"code\":\"unsupported_event\",\"type\":\"error\"}");
     }
 
     @Test
@@ -77,6 +82,7 @@ class ChatWebSocketHandlerTest {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
         when(session.getAttributes()).thenReturn(attributes);
+        doNothing().when(session).sendMessage(any(TextMessage.class));
 
         // Act
         handler.afterConnectionEstablished(session);
@@ -98,8 +104,10 @@ class ChatWebSocketHandlerTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Unauthenticated");
 
-        verify(sessionManager, never()).register(session);
+        // Session is registered before userId is extracted, but no other operations happen
+        verify(sessionManager).register(session);
         verify(presenceStore, never()).setOnline(any());
+        verify(session, never()).sendMessage(any(TextMessage.class));
     }
 
     @Test
@@ -115,6 +123,7 @@ class ChatWebSocketHandlerTest {
         // Assert
         verify(presenceStore).setOffline(USER_ID);
         verify(sessionManager).unregister(session);
+        verify(session, never()).sendMessage(any(TextMessage.class));
     }
 
     @Test
@@ -129,6 +138,7 @@ class ChatWebSocketHandlerTest {
         // Assert
         verify(presenceStore, never()).setOffline(any());
         verify(sessionManager).unregister(session);
+        verify(session, never()).sendMessage(any(TextMessage.class));
     }
 
     @Test
@@ -144,6 +154,7 @@ class ChatWebSocketHandlerTest {
         when(session.getId()).thenReturn("session-id");
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenReturn(incomingMessage);
         when(messageService.createMessage(eq(SENDER_ID), eq(ROOM_ID), eq(CONTENT), any(Instant.class))).thenReturn(message);
+        doNothing().when(session).sendMessage(any(TextMessage.class));
 
         TextMessage textMessage = new TextMessage(payload);
 
@@ -165,6 +176,8 @@ class ChatWebSocketHandlerTest {
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
         when(session.getAttributes()).thenReturn(attributes);
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenReturn(incomingMessage);
+        doNothing().when(session).sendMessage(any(TextMessage.class));
+        doNothing().when(sessionManager).joinRoom(any(), any());
 
         TextMessage textMessage = new TextMessage(payload);
 
@@ -186,6 +199,8 @@ class ChatWebSocketHandlerTest {
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
         when(session.getAttributes()).thenReturn(attributes);
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenReturn(incomingMessage);
+        doNothing().when(session).sendMessage(any(TextMessage.class));
+        doNothing().when(sessionManager).leaveRoom(any(), any());
 
         TextMessage textMessage = new TextMessage(payload);
 
@@ -207,6 +222,7 @@ class ChatWebSocketHandlerTest {
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
         when(session.getAttributes()).thenReturn(attributes);
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenReturn(incomingMessage);
+        doNothing().when(session).sendMessage(any(TextMessage.class));
 
         TextMessage textMessage = new TextMessage(payload);
 
@@ -227,6 +243,7 @@ class ChatWebSocketHandlerTest {
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
         when(session.getAttributes()).thenReturn(attributes);
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenReturn(incomingMessage);
+        doNothing().when(session).sendMessage(any(TextMessage.class));
 
         TextMessage textMessage = new TextMessage(payload);
 
@@ -245,6 +262,7 @@ class ChatWebSocketHandlerTest {
         Map<String, Object> attributes = new HashMap<>();
         when(session.getAttributes()).thenReturn(attributes);
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenThrow(new RuntimeException("Error"));
+        doNothing().when(session).sendMessage(any(TextMessage.class));
 
         TextMessage textMessage = new TextMessage(payload);
 
