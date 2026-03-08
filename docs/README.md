@@ -48,6 +48,13 @@ Discord-like is a real-time communication platform built with Spring Boot 4.0.2 
 - [01-project-structure.md](./development/01-project-structure.md) - Project structure guide
 - [02-testing.md](./development/02-testing.md) - Testing approach and coverage
 
+### Deployment
+
+- [README.md](./deployment/README.md) - Deployment overview and quick start
+- [01-docker.md](./deployment/01-docker.md) - Docker deployment guide
+- [03-production.md](./deployment/03-production.md) - Production configuration and security
+- [04-monitoring.md](./deployment/04-monitoring.md) - Prometheus and Grafana monitoring setup
+
 ## High-Level Architecture
 
 ```

@@ -83,6 +83,44 @@ module-name/
     └── websocket/       # WebSocket handlers
 ```
 
+## Collaboration Module Structure
+
+The collaboration module includes E2EE and Conversation features:
+
+```
+modules/collaboration/
+├── application/
+│   ├── dto/           # CreateRoomRequest, UpdateRoomRequest, JoinRoomRequest,
+│   │                  # SendMessageRequest, RoomResponse, MessageResponse,
+│   │                  # InviteResponse, UpdateMessageRequest
+│   ├── factory/       # InviteFactory (generates 8-char uppercase invite codes)
+│   └── service/       # RoomService, MessageService, InviteService,
+│                      # E2EEKeyManagementService, ConversationService
+├── domain/
+│   ├── event/       # RoomEvents, MessageEvents, InviteEvents, EncryptionEvents
+│   ├── model/
+│   │   ├── aggregate/  # Room, Message, Invite, Conversation
+│   │   ├── error/       # RoomEncryptionError
+│   │   └── value_object/  # InviteCode, MessageContent, RoomName, Membership
+│   ├── ports/         # EncryptionService, RoomEncryptionStateRepository, ConversationRepository
+│   └── repository/    # RoomRepository, MessageRepository, InviteRepository
+└── infrastructure/
+    ├── adapter/       # RoomRepositoryAdapter, MessageRepositoryAdapter, InviteRepositoryAdapter,
+    │                  # RoomEncryptionStateRepositoryAdapter, ConversationRepositoryAdapter
+    ├── encryption/    # AesEncryptionService (AES/GCM/NoPadding, random 12-byte IV,
+    │                  # IV prepended to ciphertext, key from ENCRYPTION_SECRET env var),
+    │                  # E2EEKeyManagementService (X25519 key exchange, key rotation)
+    ├── event/         # InviteEventListener, MessageEventListener, RoomEventListener
+    │                  # (Kafka consumers → broadcast to WebSocket)
+    ├── http/          # RoomController, MessageController, E2EEController
+    ├── persistence/
+    │   ├── entity/    # RoomJpaEntity, MessageJpaEntity, InviteJpaEntity,
+    │   │              # RoomEncryptionStateJpaEntity, ConversationJpaEntity
+    │   └── repository/ # RoomJpaRepository, MessageJpaRepository, InviteJpaRepository,
+    │                  # RoomEncryptionStateJpaRepository, ConversationJpaRepository
+    └── websocket/       # WebSocket handlers
+```
+
 ## Naming Conventions
 
 ### Packages
@@ -102,10 +140,10 @@ module-name/
 - `Username`, `Email`, `PasswordHash`, `RoomName`, `MessageContent`, `InviteCode`
 
 **Aggregates**: Entity that is the root of an aggregate
-- `User`, `Room`, `Conversation`, `UserPresence`
+- `User`, `Room`, `Message`, `Invite`, `Conversation`, `UserPresence`
 
 **Domain Events**: `[Aggregate]Events`
-- `UserEvents`, `RoomEvents`, `MessageEvents`, `InviteEvents`, `PresenceEvents`
+- `UserEvents`, `RoomEvents`, `MessageEvents`, `InviteEvents`, `PresenceEvents`, `EncryptionEvents`
 
 **Domain Errors**: Descriptive, ends with `Error`
 - `InvalidUserError`, `InvalidRoomError`, `InvalidMessageError`, `ForbiddenError`

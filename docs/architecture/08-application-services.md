@@ -157,7 +157,7 @@ public class RoomService {
 
     public void addMember(Long roomId, Long invitedUserId, Instant now) {
         Room room = roomRepository.findById(roomId)
-            .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
+                .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
         room.addMember(invitedUserId, now);
         roomRepository.save(room);
         eventPublisher.publish(RoomEvents.memberJoined(roomId, invitedUserId, now));
@@ -238,71 +238,160 @@ public class MessageService {
 }
 ```
 
-### Presence Context Services
+#### InviteService
 
-#### PresenceService
-
-Handles user presence tracking.
+Handles invite generation and management.
 
 ```java
 @Service
-public class PresenceService implements TrackPresenceUseCase, QueryPresenceUseCase {
-    private final PresenceRepository presenceRepository;
+@Transactional
+public class InviteService {
+    private final InviteRepository inviteRepository;
+    private final RoomRepository roomRepository;
+    private final InviteFactory inviteFactory;
     private final EventPublisher eventPublisher;
 
-    @Override
-    public void setOnline(Long userId) {
-        boolean isNewPresence = !presenceRepository.findByUserId(userId).isPresent();
-        UserPresence presence = presenceRepository.findByUserId(userId)
-            .orElseGet(() -> new UserPresence(userId, PresenceState.ONLINE, Instant.now()));
+    public Invite generateInvite(Long roomId, Long roomId, Instant now) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
+        Invite invite = inviteFactory.createInvite(roomId, roomId, now);
+        Invite saved = inviteRepository.save(invite);
+        eventPublisher.publish(InviteEvents.generated(saved, now));
+        return saved;
+    }
 
-        PresenceState previousState = presence.getState();
-        presence.setOnline();
-        presenceRepository.save(presence);
+    public Invite acceptInvite(String code, Long userId, Instant now) {
+        Invite invite = inviteRepository.findByCode(code)
+                .orElseThrow(() -> new InvalidInviteCodeError("Invalid or expired invite code"));
 
-        if (isNewPresence || previousState != PresenceState.ONLINE) {
-            eventPublisher.publish(PresenceEvents.userCameOnline(presence, Instant.now()));
+        if (invite.isExpired(now)) {
+            throw new InvalidInviteCodeError("Invite code has expired");
         }
+
+        invite.accept(userId, now);
+        Invite updated = inviteRepository.save(invite);
+        eventPublisher.publish(InviteEvents.accepted(updated, now));
+
+        roomService.addMember(invite.roomId(), userId, now);
     }
 
-    @Override
-    public void setOffline(Long userId) {
-        boolean isNewPresence = !presenceRepository.findByUserId(userId).isPresent();
-        UserPresence presence = presenceRepository.findByUserId(userId)
-            .orElse(new UserPresence(userId, PresenceState.OFFLINE, Instant.now()));
+    public void revokeInvite(String code, Long userId, Instant now) {
+        Invite invite = inviteRepository.findByCode(code)
+                .orElseThrow(() -> new InvalidInviteCodeError("Invalid invite code"));
 
-        PresenceState previousState = presence.getState();
-        presence.setOffline();
-        presenceRepository.save(presence);
+        Room room = roomRepository.findById(invite.roomId())
+                .orElseThrow(() -> new RoomNotFoundError(invite.roomId().toString()));
 
-        if (isNewPresence || previousState != PresenceState.OFFLINE) {
-            eventPublisher.publish(PresenceEvents.userWentOffline(presence, Instant.now()));
+        if (!room.isOwner(userId)) {
+            throw new ForbiddenError("Only room owner can revoke invites");
         }
-    }
 
-    @Override
-    public PresenceStatus getPresenceStatus(Long userId) {
-        return presenceRepository.findByUserId(userId)
-            .map(p -> PresenceStatus.fromDomain(
-                p.getUserId(),
-                p.getState().name(),
-                p.getLastSeen().timestamp(),
-                null
-            ))
-            .orElse(PresenceStatus.fromDomain(
-                userId,
-                PresenceState.OFFLINE.name(),
-                Instant.now(),
-                null
-            ));
-    }
-
-    @Override
-    public Set<Long> getOnlineUserIds() {
-        return presenceRepository.getOnlineUserIds();
+        invite.revoke(now);
+        inviteRepository.save(invite);
+        eventPublisher.publish(InviteEvents.revoked(invite, now));
     }
 }
 ```
+
+#### E2EEKeyManagementService
+
+Handles End-to-End Encryption (E2EE) for rooms using X25519 key exchange.
+
+```java
+@Service
+@Transactional
+public class E2EEKeyManagementService {
+    private final RoomEncryptionStateRepository encryptionStateRepository;
+    private final SecureRandom secureRandom;
+
+    private static final String KEY_ALGORITHM = "X25519";
+    private static final int KEY_SIZE = 256;
+
+    public RoomEncryptionState enableE2EE(Long roomId, Long ownerId, byte[] ownerPublicKey) {
+        // 1. Validate key size (X25519 requires 32 bytes)
+        if (ownerPublicKey == null || ownerPublicKey.length != 32) {
+            throw new IllegalArgumentException("Owner public key must be 32 bytes");
+        }
+
+        // 2. Generate ephemeral key pair for this room
+        KeyPair ephemeralKeyPair = generateKeyPair();
+        byte[] rawPublicKey = extractRawX25519KeyBytes(
+                ephemeralKeyPair.getPublic().getEncoded());
+
+        // 3. Generate room symmetric key (AES-256)
+        byte[] roomKey = generateRoomKey();
+
+        // 4. Encrypt room key for owner using ECDH (simplified)
+        byte[] encryptedRoomKey = encryptRoomKeyForUser(roomKey, ownerPublicKey);
+
+        // 5. Create encryption state
+        RoomEncryptionState state = RoomEncryptionState.createE2EE(
+                roomId,
+                rawPublicKey,
+                encryptedRoomKey
+        );
+
+        return encryptionStateRepository.save(state);
+    }
+
+    public RoomEncryptionState rotateRoomKey(Long roomId) {
+        RoomEncryptionState state = encryptionStateRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("E2EE not enabled for room " + roomId));
+
+        // Generate new room symmetric key
+        byte[] newRoomKey = generateRoomKey();
+
+        // Generate new ephemeral key pair
+        KeyPair newEphemeralKeyPair = generateKeyPair();
+        byte[] rawPublicKey = extractRawX25519KeyBytes(
+                newEphemeralKeyPair.getPublic().getEncoded());
+
+        // Encrypt new room key with room's public key
+        byte[] encryptedRoomKey = encryptRoomKeyForUser(newRoomKey, state.roomPublicKey());
+
+        // Rotate key
+        RoomEncryptionState newState = state.rotateKey(
+                rawPublicKey,
+                encryptedRoomKey
+        );
+
+        return encryptionStateRepository.save(newState);
+    }
+
+    public byte[] encryptRoomKeyForMember(Long roomId, byte[] memberPublicKey) {
+        RoomEncryptionState state = encryptionStateRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("E2EE not enabled for room " + roomId));
+
+        // Generate ephemeral key pair for this distribution
+        KeyPair ephemeralKeyPair = generateKeyPair();
+
+        // Extract room key (in production, decrypt from state)
+        byte[] roomKey = generateRoomKey();
+
+        // Encrypt room key for member using ECDH (simplified)
+        byte[] encryptedRoomKey = encryptRoomKeyForUser(roomKey, memberPublicKey);
+
+        return encryptedRoomKey;
+    }
+
+    private byte[] extractRawX25519KeyBytes(byte[] encodedKey) {
+        if (encodedKey.length == 32) {
+            return encodedKey;
+        }
+        // Extract raw 32-byte key from ASN.1 encoded format
+        int start = encodedKey.length - 32;
+        byte[] rawKey = new byte[32];
+        System.arraycopy(encodedKey, start, rawKey, 0, 32);
+        return rawKey;
+    }
+}
+```
+
+**Key Points:**
+- Uses X25519 curve for ECDH key exchange
+- Encrypts room symmetric keys for each member
+- Supports key rotation for forward secrecy
+- Extracts raw 32-byte X25519 keys from ASN.1 encoded format
 
 ## DTOs (Data Transfer Objects)
 
