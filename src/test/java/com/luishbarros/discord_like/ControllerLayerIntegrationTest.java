@@ -14,6 +14,7 @@ import com.luishbarros.discord_like.modules.identity.domain.ports.TokenProvider;
 import com.luishbarros.discord_like.modules.identity.domain.ports.repository.UserRepository;
 import com.luishbarros.discord_like.modules.presence.application.service.PresenceService;
 import com.luishbarros.discord_like.shared.adapters.http.HealthController;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Controller layer unit test using @WebMvcTest.
  * Uses mocks for service dependencies and doesn't require Testcontainers.
  */
+@Tag("integration")
 @WebMvcTest(controllers = HealthController.class,
 		excludeAutoConfiguration = {
 			org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,

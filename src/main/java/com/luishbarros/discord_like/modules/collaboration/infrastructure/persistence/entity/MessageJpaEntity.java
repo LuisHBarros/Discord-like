@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "messages")
+@Table(name = "messages", indexes = {
+    @Index(name = "idx_messages_room_id_created_at", columnList = "room_id, created_at"),
+    @Index(name = "idx_messages_room_id_id",         columnList = "room_id, id")
+})
 public class MessageJpaEntity {
 
     @Id

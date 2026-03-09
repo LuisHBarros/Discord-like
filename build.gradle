@@ -74,5 +74,15 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		if (project.hasProperty('excludeTags')) {
+			def tagsToExclude = project.property('excludeTags').toString().split(',')
+			excludeTags(*tagsToExclude)
+		}
+
+		if (project.hasProperty('includeTags')) {
+			def tagsToInclude = project.property('includeTags').toString().split(',')
+			includeTags(*tagsToInclude)
+		}
+	}
 }
