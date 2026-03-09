@@ -1,7 +1,6 @@
 package com.luishbarros.discord_like.modules.collaboration.domain.model.aggregate;
 
 import com.luishbarros.discord_like.modules.collaboration.domain.error.InvalidMessageError;
-import com.luishbarros.discord_like.modules.collaboration.domain.error.RoomNotFoundError;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Message;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.value_object.MessageContent;
 import com.luishbarros.discord_like.shared.domain.model.BaseEntity;
@@ -56,7 +55,7 @@ public class Conversation extends BaseEntity {
 
     public void updateMessage(Long messageId, MessageContent newContent, Instant now) {
         Message message = findMessage(messageId)
-            .orElseThrow(() -> new RoomNotFoundError("Message not found"));
+            .orElseThrow(() -> new InvalidMessageError("Message not found"));
         message.edit(newContent, now);
         this.lastActivityAt = now;
         this.updatedAt = now;
@@ -64,7 +63,7 @@ public class Conversation extends BaseEntity {
 
     public void deleteMessage(Long messageId, Instant now) {
         Message message = findMessage(messageId)
-            .orElseThrow(() -> new RoomNotFoundError("Message not found"));
+            .orElseThrow(() -> new InvalidMessageError("Message not found"));
         messages.remove(message);
         this.lastActivityAt = now;
         this.updatedAt = now;

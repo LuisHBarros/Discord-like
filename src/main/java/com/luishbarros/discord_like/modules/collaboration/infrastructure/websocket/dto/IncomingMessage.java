@@ -4,6 +4,5 @@ package com.luishbarros.discord_like.modules.collaboration.infrastructure.websoc
 public record IncomingMessage(
         String type,
         Long roomId,
-        String content,
-        Long senderId
+        String content
 ) {}

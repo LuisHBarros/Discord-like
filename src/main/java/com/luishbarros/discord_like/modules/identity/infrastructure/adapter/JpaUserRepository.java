@@ -1,5 +1,5 @@
 // auth/infrastructure/adapter/JpaUserRepository.java
-package com.luishbarros.discord_like.modules.identity.infrastructure.adapters;
+package com.luishbarros.discord_like.modules.identity.infrastructure.adapter;
 
 import com.luishbarros.discord_like.modules.identity.domain.model.User;
 import com.luishbarros.discord_like.modules.identity.domain.ports.repository.UserRepository;

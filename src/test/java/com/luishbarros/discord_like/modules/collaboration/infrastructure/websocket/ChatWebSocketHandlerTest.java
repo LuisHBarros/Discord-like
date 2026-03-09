@@ -144,16 +144,16 @@ class ChatWebSocketHandlerTest {
     @Test
     void handleTextMessage_withMessageType_createsAndPublishesMessage() throws Exception {
         // Arrange
-        String payload = "{\"type\":\"message\",\"senderId\":" + SENDER_ID + ",\"roomId\":" + ROOM_ID + ",\"content\":\"" + CONTENT + "\"}";
-        IncomingMessage incomingMessage = new IncomingMessage("message", ROOM_ID, CONTENT, SENDER_ID);
-        Message message = new Message(SENDER_ID, ROOM_ID, new MessageContent(CIPHERTEXT), NOW);
+        String payload = "{\"type\":\"message\",\"roomId\":" + ROOM_ID + ",\"content\":\"" + CONTENT + "\"}";
+        IncomingMessage incomingMessage = new IncomingMessage("message", ROOM_ID, CONTENT);
+        Message message = new Message(USER_ID, ROOM_ID, new MessageContent(CIPHERTEXT), NOW);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
         when(session.getAttributes()).thenReturn(attributes);
         when(session.getId()).thenReturn("session-id");
         when(objectMapper.readValue(payload, IncomingMessage.class)).thenReturn(incomingMessage);
-        when(messageService.createMessage(eq(SENDER_ID), eq(ROOM_ID), eq(CONTENT), any(Instant.class))).thenReturn(message);
+        when(messageService.createMessage(eq(USER_ID), eq(ROOM_ID), eq(CONTENT), any(Instant.class))).thenReturn(message);
         doNothing().when(session).sendMessage(any(TextMessage.class));
 
         TextMessage textMessage = new TextMessage(payload);
@@ -162,7 +162,7 @@ class ChatWebSocketHandlerTest {
         handler.handleTextMessage(session, textMessage);
 
         // Assert
-        verify(messageService).createMessage(eq(SENDER_ID), eq(ROOM_ID), eq(CONTENT), any(Instant.class));
+        verify(messageService).createMessage(eq(USER_ID), eq(ROOM_ID), eq(CONTENT), any(Instant.class));
         verify(eventPublisher).publish(any());
     }
 
@@ -170,7 +170,7 @@ class ChatWebSocketHandlerTest {
     void handleTextMessage_withJoinRoomType_joinsRoom() throws Exception {
         // Arrange
         String payload = "{\"type\":\"join_room\",\"roomId\":" + ROOM_ID + "}";
-        IncomingMessage incomingMessage = new IncomingMessage("join_room", ROOM_ID, null, null);
+        IncomingMessage incomingMessage = new IncomingMessage("join_room", ROOM_ID, null);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
@@ -193,7 +193,7 @@ class ChatWebSocketHandlerTest {
     void handleTextMessage_withLeaveRoomType_leavesRoom() throws Exception {
         // Arrange
         String payload = "{\"type\":\"leave_room\",\"roomId\":" + ROOM_ID + "}";
-        IncomingMessage incomingMessage = new IncomingMessage("leave_room", ROOM_ID, null, null);
+        IncomingMessage incomingMessage = new IncomingMessage("leave_room", ROOM_ID, null);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
@@ -216,7 +216,7 @@ class ChatWebSocketHandlerTest {
     void handleTextMessage_withPingType_sendsPong() throws Exception {
         // Arrange
         String payload = "{\"type\":\"ping\"}";
-        IncomingMessage incomingMessage = new IncomingMessage("ping", null, null, null);
+        IncomingMessage incomingMessage = new IncomingMessage("ping", null, null);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
@@ -237,7 +237,7 @@ class ChatWebSocketHandlerTest {
     void handleTextMessage_withUnsupportedMessageType_sendsError() throws Exception {
         // Arrange
         String payload = "{\"type\":\"unsupported\"}";
-        IncomingMessage incomingMessage = new IncomingMessage("unsupported", null, null, null);
+        IncomingMessage incomingMessage = new IncomingMessage("unsupported", null, null);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put(ChatWebSocketHandler.ATTR_USER_ID, USER_ID);
@@ -257,7 +257,7 @@ class ChatWebSocketHandlerTest {
     @Test
     void handleTextMessage_withUnauthenticatedSession_doesNotCreateMessage() throws Exception {
         // Arrange
-        String payload = "{\"type\":\"message\",\"senderId\":" + SENDER_ID + ",\"roomId\":" + ROOM_ID + ",\"content\":\"" + CONTENT + "\"}";
+        String payload = "{\"type\":\"message\",\"roomId\":" + ROOM_ID + ",\"content\":\"" + CONTENT + "\"}";
 
         Map<String, Object> attributes = new HashMap<>();
         when(session.getAttributes()).thenReturn(attributes);

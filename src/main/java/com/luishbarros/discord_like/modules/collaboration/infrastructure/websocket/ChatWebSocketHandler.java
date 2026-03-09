@@ -83,13 +83,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void handleChatMessage(WebSocketSession session, IncomingMessage payload) throws IOException {
         Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
 
-        if (!userId.equals(payload.senderId())) {
-            sendError(session, "unauthorized");
-            return;
-        }
-
         Message message = messageService.createMessage(
-                payload.senderId(),
+                userId,
                 payload.roomId(),
                 payload.content(),
                 Instant.now()
@@ -98,7 +93,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Publish WebSocket distribution event for cross-node broadcasting
         WebSocketDistributionEvent distributionEvent = WebSocketDistributionEvent.chatMessage(
             payload.roomId(),
-            payload.senderId(),
+            userId,
             message.getContent().ciphertext(),
             message.getCreatedAt()
         );
