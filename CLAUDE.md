@@ -185,6 +185,8 @@ shared/
 
 **Use case ports:** The `presence` module demonstrates the use case pattern with `TrackPresenceUseCase` and `QueryPresenceUseCase` interfaces in `application/ports/in/`. Application services implement these use case ports, providing a clear contract for interaction.
 
+**Conversation aggregate memory trade-off:** The `Conversation` aggregate loads up to 10,000 messages into memory using a `SortedSet`. This design prioritizes domain completeness and invariant enforcement over memory efficiency. Each active room consumes approximately 2-5MB. For large-scale deployments, consider migrating to lazy loading or a repository-based approach to reduce memory footprint while maintaining domain invariants through application service layer validation.
+
 ## Key Technologies
 
 - **Spring Boot 4.0.2** with Spring Data JPA, Spring Data Redis, Spring Security, Spring WebSocket

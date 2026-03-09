@@ -11,14 +11,38 @@ import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+/**
+ * Aggregate root for managing a room's conversation messages.
+ *
+ * <p><b>Design Trade-off Note:</b></p>
+ * <p>This aggregate loads all messages (up to {@link #MAX_MESSAGES}) into memory using a {@link SortedSet}.
+ * This design choice prioritizes:</p>
+ * <ul>
+ *   <li>Domain completeness - all business rules enforced in one place</li>
+ *   <li>Message limit enforcement - validated at aggregate level</li>
+ *   <li>Consistent invariants - message order and count maintained centrally</li>
+ * </ul>
+ *
+ * <p><b>Impact:</b></p>
+ * <ul>
+ *   <li>Approximately 2-5MB per active room (10,000 messages × 200-500 bytes each)</li>
+ *   <li>MessageRepository still provides cursor-based pagination for efficient queries</li>
+ *   <li>Consider migrating to lazy loading if memory becomes a concern at scale</li>
+ * </ul>
+ */
 public class Conversation extends BaseEntity {
 
     private Long roomId;
+
     private final SortedSet<Message> messages = new TreeSet<>((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
     private Instant lastActivityAt;
     private Instant createdAt;
     private Instant updatedAt;
+
     private static final int MAX_MESSAGES = 10000;
+
+    {
+    }
 
     protected Conversation() {}
 
