@@ -4,7 +4,6 @@ import com.luishbarros.discord_like.modules.identity.application.dto.AuthRespons
 import com.luishbarros.discord_like.modules.identity.application.dto.LoginRequest;
 import com.luishbarros.discord_like.modules.identity.application.dto.RefreshRequest;
 import com.luishbarros.discord_like.modules.identity.application.dto.RegisterRequest;
-import com.luishbarros.discord_like.modules.identity.application.service.AuthService;
 import com.luishbarros.discord_like.shared.adapters.ratelimit.RateLimitedAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

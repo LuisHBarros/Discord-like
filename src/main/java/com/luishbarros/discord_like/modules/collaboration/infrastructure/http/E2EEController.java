@@ -25,66 +25,63 @@ public class E2EEController {
                         @PathVariable Long roomId,
                         @RequestHeader("X-User-Id") Long userId,
                         @RequestBody EnableE2ERequest request) {
-                // Validate ownership (use RoomService)
+                
                 var state = keyManagementService.enableE2EE(
                                 roomId,
                                 userId,
-                                Base64.getDecoder().decode(request.publicKey()));
+                                Base64.getDecoder().decode(request.encryptedRoomKey()));
 
                 return ResponseEntity.ok(RoomEncryptionResponse.fromState(state));
         }
 
         /**
-         * Get room encryption key for a member
+         * Upload encrypted room key for a specific member
+         */
+        @PutMapping("/rooms/{roomId}/members/{memberId}/key")
+        public ResponseEntity<Void> uploadMemberKey(
+                        @PathVariable Long roomId,
+                        @PathVariable Long memberId,
+                        @RequestHeader("X-User-Id") Long uploaderId,
+                        @RequestBody UploadKeyRequest request) {
+
+                keyManagementService.uploadMemberKey(
+                                roomId,
+                                memberId,
+                                Base64.getDecoder().decode(request.encryptedRoomKey()));
+
+                return ResponseEntity.ok().build();
+        }
+
+        /**
+         * Get room encryption key for the requesting member
          */
         @GetMapping("/rooms/{roomId}/key")
         public ResponseEntity<EncryptedKeyResponse> getRoomKey(
                         @PathVariable Long roomId,
-                        @RequestHeader("X-User-Id") Long userId,
-                        @RequestBody GetRoomKeyRequest request) {
-                // Validate membership first
+                        @RequestHeader("X-User-Id") Long userId) {
 
-                byte[] encryptedKey = keyManagementService.encryptRoomKeyForMember(
+                byte[] encryptedKey = keyManagementService.getRoomKeyForMember(
                                 roomId,
-                                Base64.getDecoder().decode(request.publicKey()));
+                                userId);
 
                 return ResponseEntity.ok(new EncryptedKeyResponse(
-                                Base64.getEncoder().encodeToString(encryptedKey)));
-        }
-
-        /**
-         * Rotate room key (room owner only)
-         */
-        @PostMapping("/rooms/{roomId}/rotate-key")
-        public ResponseEntity<RoomEncryptionResponse> rotateKey(
-                        @PathVariable Long roomId,
-                        @RequestHeader("X-User-Id") Long userId) {
-                // Validate ownership
-
-                var state = keyManagementService.rotateRoomKey(roomId);
-                return ResponseEntity.ok(RoomEncryptionResponse.fromState(state));
+                                encryptedKey != null ? Base64.getEncoder().encodeToString(encryptedKey) : null));
         }
 }
 
-record EnableE2ERequest(String publicKey) {
+record EnableE2ERequest(String encryptedRoomKey) {
 }
 
-record GetRoomKeyRequest(String publicKey) {
+record UploadKeyRequest(String encryptedRoomKey) {
 }
 
 record RoomEncryptionResponse(
                 Long roomId,
-                String mode,
-                String publicKey,
-                String encryptedKey) {
+                String mode) {
         static RoomEncryptionResponse fromState(RoomEncryptionState state) {
                 return new RoomEncryptionResponse(
                                 state.roomId(),
-                                state.mode().name(),
-                                Base64.getEncoder().encodeToString(state.roomPublicKey()),
-                                state.encryptedRoomKey() != null
-                                                ? Base64.getEncoder().encodeToString(state.encryptedRoomKey())
-                                                : null);
+                                state.mode().name());
         }
 }
 

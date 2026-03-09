@@ -5,9 +5,11 @@ import com.luishbarros.discord_like.modules.collaboration.domain.error.InvalidRo
 import com.luishbarros.discord_like.modules.collaboration.domain.error.RoomNotFoundError;
 import com.luishbarros.discord_like.modules.collaboration.domain.event.RoomEvents;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
+import com.luishbarros.discord_like.modules.collaboration.domain.model.RoomMembership;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.value_object.RoomName;
 import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
+import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomMembershipRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.service.RoomMembershipValidator;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -26,20 +29,27 @@ public class RoomService {
     private final RoomRepository roomRepository;
     private final EventPublisher eventPublisher;
     private final RoomMembershipValidator membershipValidator;
+    private final RoomMembershipRepository roomMembershipRepository;
 
     public RoomService(
             RoomRepository roomRepository,
             EventPublisher eventPublisher,
-            RoomMembershipValidator membershipValidator
+            RoomMembershipValidator membershipValidator,
+            RoomMembershipRepository roomMembershipRepository
     ) {
         this.roomRepository = roomRepository;
         this.eventPublisher = eventPublisher;
         this.membershipValidator = membershipValidator;
+        this.roomMembershipRepository = roomMembershipRepository;
     }
 
     public Room createRoom(String name, Long ownerId, Instant now) {
         Room room = new Room(new RoomName(name), ownerId, now);
         Room saved = roomRepository.save(room);
+        
+        RoomMembership ownerMembership = RoomMembership.create(saved.getId(), ownerId, now);
+        roomMembershipRepository.save(ownerMembership);
+        
         eventPublisher.publish(RoomEvents.roomCreated(saved, now));
         return saved;
     }
@@ -59,7 +69,10 @@ public class RoomService {
             unless = "#result == null || #result.isEmpty()"
     )
     public List<Room> findByMemberId(Long userId) {
-        return roomRepository.findByMemberId(userId);
+        return roomMembershipRepository.findByUserId(userId).stream()
+                .map(membership -> roomRepository.findById(membership.getRoomId()).orElse(null))
+                .filter(room -> room != null)
+                .collect(Collectors.toList());
     }
 
     @Cacheable(
@@ -68,8 +81,10 @@ public class RoomService {
             unless = "#result == null || #result.isEmpty()"
     )
     public Set<Long> getMembers(Long roomId, Long userId) {
-        Room room = membershipValidator.validateAndGetRoom(roomId, userId);
-        return room.getMemberIds();
+        membershipValidator.validateAndGetRoom(roomId, userId);
+        return roomMembershipRepository.findByRoomId(roomId).stream()
+                .map(RoomMembership::getUserId)
+                .collect(Collectors.toSet());
     }
 
     @CachePut(
@@ -92,6 +107,7 @@ public class RoomService {
     public void deleteRoom(Long roomId, Long userId, Instant now) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         validateOwnership(room, userId);
+        roomMembershipRepository.deleteByRoomId(roomId);
         roomRepository.deleteById(roomId);
         eventPublisher.publish(RoomEvents.roomDeleted(roomId, userId, now));
     }
@@ -103,8 +119,10 @@ public class RoomService {
     public void addMember(Long roomId, Long invitedUserId, Instant now) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
-        room.addMember(invitedUserId, now);
-        roomRepository.save(room);
+        if (!roomMembershipRepository.existsByRoomIdAndUserId(roomId, invitedUserId)) {
+            RoomMembership newMembership = RoomMembership.create(roomId, invitedUserId, now);
+            roomMembershipRepository.save(newMembership);
+        }
         eventPublisher.publish(RoomEvents.memberJoined(roomId, invitedUserId, now));
     }
 
@@ -115,8 +133,12 @@ public class RoomService {
     public void removeMember(Long roomId, Long userId, Long targetUserId, Instant now) {
         Room room = membershipValidator.validateAndGetRoom(roomId, userId);
         validateOwnership(room, userId);
-        room.removeMember(targetUserId, now);
-        roomRepository.save(room);
+        
+        if (room.isOwner(targetUserId)) {
+            throw new InvalidRoomError("Cannot remove room owner");
+        }
+        
+        roomMembershipRepository.deleteByRoomIdAndUserId(roomId, targetUserId);
         eventPublisher.publish(RoomEvents.memberLeft(roomId, targetUserId, now));
     }
 
@@ -129,8 +151,7 @@ public class RoomService {
         if (room.isOwner(userId)) {
             throw new InvalidRoomError("Room owner cannot leave room");
         }
-        room.removeMember(userId, now);
-        roomRepository.save(room);
+        roomMembershipRepository.deleteByRoomIdAndUserId(roomId, userId);
         eventPublisher.publish(RoomEvents.memberLeft(roomId, userId, now));
     }
 

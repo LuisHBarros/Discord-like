@@ -21,12 +21,6 @@ public class RoomEncryptionStateJpaEntity {
     @Column(name = "encryption_mode", nullable = false)
     private RoomEncryptionState.EncryptionMode mode;
 
-    @Column(name = "room_public_key", columnDefinition = "BYTEA")
-    private byte[] roomPublicKey;
-
-    @Column(name = "encrypted_room_key", columnDefinition = "BYTEA")
-    private byte[] encryptedRoomKey;
-
     @Column(name = "key_rotated_at")
     private Instant keyRotatedAt;
 
@@ -37,12 +31,9 @@ public class RoomEncryptionStateJpaEntity {
     }
 
     public RoomEncryptionStateJpaEntity(Long roomId, RoomEncryptionState.EncryptionMode mode,
-            byte[] roomPublicKey, byte[] encryptedRoomKey,
             Instant keyRotatedAt, Instant createdAt) {
         this.roomId = roomId;
         this.mode = mode;
-        this.roomPublicKey = roomPublicKey;
-        this.encryptedRoomKey = encryptedRoomKey;
         this.keyRotatedAt = keyRotatedAt;
         this.createdAt = createdAt;
     }
@@ -59,14 +50,6 @@ public class RoomEncryptionStateJpaEntity {
         return mode;
     }
 
-    public byte[] getRoomPublicKey() {
-        return roomPublicKey;
-    }
-
-    public byte[] getEncryptedRoomKey() {
-        return encryptedRoomKey;
-    }
-
     public Instant getKeyRotatedAt() {
         return keyRotatedAt;
     }
@@ -81,8 +64,6 @@ public class RoomEncryptionStateJpaEntity {
                 this.id,
                 this.roomId,
                 this.mode,
-                this.roomPublicKey,
-                this.encryptedRoomKey,
                 this.keyRotatedAt,
                 this.createdAt);
     }
@@ -92,8 +73,6 @@ public class RoomEncryptionStateJpaEntity {
         RoomEncryptionStateJpaEntity entity = new RoomEncryptionStateJpaEntity(
                 state.roomId(),
                 state.mode(),
-                state.roomPublicKey(),
-                state.encryptedRoomKey(),
                 state.keyRotatedAt(),
                 state.createdAt());
         entity.id = state.getId();

@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InMemoryRoomRepository implements RoomRepository {
 
     private final Map<Long, Room> roomsById = new ConcurrentHashMap<>();
-    private final Map<Long, Set<Room>> roomsByMemberId = new ConcurrentHashMap<>();
 
     @Override
     public Room save(Room room) {
@@ -20,9 +19,6 @@ public class InMemoryRoomRepository implements RoomRepository {
                 .orElse(0L) + 1;
         }
         roomsById.put(room.getId(), room);
-        room.getMemberIds().forEach(memberId -> {
-            roomsByMemberId.computeIfAbsent(memberId, k -> new HashSet<>()).add(room);
-        });
         return room;
     }
 
@@ -39,23 +35,8 @@ public class InMemoryRoomRepository implements RoomRepository {
     }
 
     @Override
-    public List<Room> findByMemberId(Long memberId) {
-        return roomsByMemberId.getOrDefault(memberId, Set.of())
-            .stream()
-            .toList();
-    }
-
-    @Override
     public void deleteById(Long id) {
-        Room room = roomsById.remove(id);
-        if (room != null) {
-            room.getMemberIds().forEach(memberId -> {
-                Set<Room> userRooms = roomsByMemberId.get(memberId);
-                if (userRooms != null) {
-                    userRooms.remove(room);
-                }
-            });
-        }
+        roomsById.remove(id);
     }
 
     @Override
@@ -65,6 +46,5 @@ public class InMemoryRoomRepository implements RoomRepository {
 
     public void clear() {
         roomsById.clear();
-        roomsByMemberId.clear();
     }
 }

@@ -4,6 +4,7 @@ import com.luishbarros.discord_like.modules.collaboration.application.dto.*;
 import com.luishbarros.discord_like.modules.collaboration.application.service.InviteService;
 import com.luishbarros.discord_like.modules.collaboration.application.service.RoomService;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Invite;
+import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
 import com.luishbarros.discord_like.modules.identity.infrastructure.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,12 +13,13 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -69,9 +71,9 @@ public class RoomController {
             )
             @Valid @RequestBody CreateRoomRequest request
     ) {
-        RoomResponse response = RoomResponse.fromRoom(
-                roomService.createRoom(request.name(), principal.getUserId(), Instant.now())
-        );
+        Room room = roomService.createRoom(request.name(), principal.getUserId(), Instant.now());
+        Set<Long> memberIds = roomService.getMembers(room.getId(), principal.getUserId());
+        RoomResponse response = RoomResponse.fromRoom(room, memberIds);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -83,7 +85,7 @@ public class RoomController {
             @ApiResponse(
                     responseCode = "200",
                     description = "List of rooms retrieved successfully",
-                    content = @Content(array = @Schema(implementation = RoomResponse.class))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Long.class)))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -97,7 +99,10 @@ public class RoomController {
     ) {
         List<RoomResponse> response = roomService.findByMemberId(principal.getUserId())
                 .stream()
-                .map(RoomResponse::fromRoom)
+                .map(room -> {
+                    Set<Long> memberIds = roomService.getMembers(room.getId(), principal.getUserId());
+                    return RoomResponse.fromRoom(room, memberIds);
+                })
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -132,9 +137,9 @@ public class RoomController {
             @Parameter(description = "Room ID", required = true, example = "123")
             @PathVariable Long id
     ) {
-        RoomResponse response = RoomResponse.fromRoom(
-                roomService.findById(id, principal.getUserId())
-        );
+        Room room = roomService.findById(id, principal.getUserId());
+        Set<Long> memberIds = roomService.getMembers(room.getId(), principal.getUserId());
+        RoomResponse response = RoomResponse.fromRoom(room, memberIds);
         return ResponseEntity.ok(response);
     }
 
@@ -186,9 +191,9 @@ public class RoomController {
             )
             @Valid @RequestBody UpdateRoomRequest request
     ) {
-        RoomResponse response = RoomResponse.fromRoom(
-                roomService.updateRoomName(id, principal.getUserId(), request.name(), Instant.now())
-        );
+        Room room = roomService.updateRoomName(id, principal.getUserId(), request.name(), Instant.now());
+        Set<Long> memberIds = roomService.getMembers(room.getId(), principal.getUserId());
+        RoomResponse response = RoomResponse.fromRoom(room, memberIds);
         return ResponseEntity.ok(response);
     }
 
@@ -349,7 +354,7 @@ public class RoomController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Member list retrieved successfully",
-                    content = @Content(array = @Schema(implementation = Long.class))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Long.class)))
             ),
             @ApiResponse(
                     responseCode = "401",

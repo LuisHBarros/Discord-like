@@ -9,9 +9,11 @@ import com.luishbarros.discord_like.modules.collaboration.domain.event.InviteEve
 import com.luishbarros.discord_like.modules.collaboration.domain.event.RoomEvents;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Invite;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
+import com.luishbarros.discord_like.modules.collaboration.domain.model.RoomMembership;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.value_object.InviteCode;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.value_object.RoomName;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.InviteRepository;
+import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomMembershipRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.service.RoomMembershipValidator;
 import com.luishbarros.discord_like.shared.ports.EventPublisher;
@@ -26,7 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,6 +42,7 @@ class InviteServiceTest {
     @Mock private InviteFactory inviteFactory;
     @Mock private InviteRepository inviteRepository;
     @Mock private RoomRepository roomRepository;
+    @Mock private RoomMembershipRepository roomMembershipRepository;
     @Mock private RoomMembershipValidator membershipValidator;
     @Mock private EventPublisher eventPublisher;
 
@@ -56,7 +58,7 @@ class InviteServiceTest {
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     private Room roomWith2Members() {
-        return Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, Set.of(OWNER_ID, MEMBER_ID), NOW, NOW);
+        return Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, NOW, NOW);
     }
 
     private Invite unsavedInvite() {
@@ -116,12 +118,13 @@ class InviteServiceTest {
         void givenValidCode_addsMemberAndPublishesBothEvents() {
             when(inviteRepository.findByCode(CODE_VALUE)).thenReturn(Optional.of(validInvite()));
             when(roomRepository.findById(ROOM_ID)).thenReturn(Optional.of(roomWith2Members()));
+            when(roomMembershipRepository.existsByRoomIdAndUserId(ROOM_ID, JOINER_ID)).thenReturn(false);
 
             inviteService.acceptInvite(CODE_VALUE, JOINER_ID, NOW);
 
-            ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
-            verify(roomRepository).save(roomCaptor.capture());
-            assertThat(roomCaptor.getValue().getMemberIds()).contains(JOINER_ID);
+            ArgumentCaptor<RoomMembership> membershipCaptor = ArgumentCaptor.forClass(RoomMembership.class);
+            verify(roomMembershipRepository).save(membershipCaptor.capture());
+            assertThat(membershipCaptor.getValue().getUserId()).isEqualTo(JOINER_ID);
 
             ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
             verify(eventPublisher, org.mockito.Mockito.times(2)).publish(eventCaptor.capture());
@@ -139,7 +142,7 @@ class InviteServiceTest {
             assertThatThrownBy(() -> inviteService.acceptInvite(CODE_VALUE, JOINER_ID, NOW))
                     .isInstanceOf(InvalidInviteCodeError.class);
 
-            verify(roomRepository, never()).save(any());
+            verify(roomMembershipRepository, never()).save(any());
         }
 
         @Test
@@ -149,7 +152,7 @@ class InviteServiceTest {
             assertThatThrownBy(() -> inviteService.acceptInvite(CODE_VALUE, JOINER_ID, NOW))
                     .isInstanceOf(InvalidInviteCodeError.class);
 
-            verify(roomRepository, never()).save(any());
+            verify(roomMembershipRepository, never()).save(any());
         }
 
         @Test

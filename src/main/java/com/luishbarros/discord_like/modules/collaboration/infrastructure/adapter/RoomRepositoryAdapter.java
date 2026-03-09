@@ -38,13 +38,6 @@ public class RoomRepositoryAdapter implements RoomRepository {
     }
 
     @Override
-    public List<Room> findByMemberId(Long memberId) {
-        return jpaRepository.findByMemberId(memberId).stream()
-                .map(RoomJpaEntity::toDomain)
-                .toList();
-    }
-
-    @Override
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }

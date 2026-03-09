@@ -68,7 +68,7 @@ class ConversationServiceTest {
     private ConversationService conversationService;
 
     private Room room() {
-        return Room.reconstitute(ROOM_ID, new RoomName("General"), SENDER_ID, Set.of(SENDER_ID, OTHER_ID), NOW, NOW);
+        return Room.reconstitute(ROOM_ID, new RoomName("General"), SENDER_ID, NOW, NOW);
     }
 
     private Message message(Long senderId) {

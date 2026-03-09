@@ -3,6 +3,7 @@ package com.luishbarros.discord_like.modules.collaboration.domain.service;
 import com.luishbarros.discord_like.modules.collaboration.domain.error.RoomNotFoundError;
 import com.luishbarros.discord_like.modules.collaboration.domain.error.UserNotInRoomError;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
+import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomMembershipRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
 import org.springframework.stereotype.Service;
 
@@ -10,9 +11,11 @@ import org.springframework.stereotype.Service;
 public class RoomMembershipValidator {
 
     private final RoomRepository roomRepository;
+    private final RoomMembershipRepository roomMembershipRepository;
 
-    public RoomMembershipValidator(RoomRepository roomRepository) {
+    public RoomMembershipValidator(RoomRepository roomRepository, RoomMembershipRepository roomMembershipRepository) {
         this.roomRepository = roomRepository;
+        this.roomMembershipRepository = roomMembershipRepository;
     }
 
     /**
@@ -24,7 +27,7 @@ public class RoomMembershipValidator {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomNotFoundError(roomId.toString()));
 
-        if (!room.isMember(userId)) {
+        if (!roomMembershipRepository.existsByRoomIdAndUserId(roomId, userId)) {
             throw new UserNotInRoomError(userId.toString(), roomId.toString());
         }
 

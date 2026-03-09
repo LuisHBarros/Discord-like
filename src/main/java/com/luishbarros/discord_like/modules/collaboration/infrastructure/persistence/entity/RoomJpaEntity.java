@@ -23,15 +23,6 @@ public class RoomJpaEntity {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "room_members",
-            joinColumns = @JoinColumn(name = "room_id"),
-            indexes = @Index(name = "idx_room_members_user_room", columnList = "user_id, room_id")
-    )
-    @Column(name = "user_id", nullable = false)
-    private Set<Long> memberIds = new HashSet<>();
-
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -40,11 +31,10 @@ public class RoomJpaEntity {
 
     protected RoomJpaEntity() {}
 
-    public RoomJpaEntity(Long id, String name, Long ownerId, Set<Long> memberIds, Instant createdAt, Instant updatedAt) {
+    public RoomJpaEntity(Long id, String name, Long ownerId, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.name = name;
         this.ownerId = ownerId;
-        this.memberIds = new HashSet<>(memberIds);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -52,7 +42,6 @@ public class RoomJpaEntity {
     public Long getId() { return id; }
     public String getName() { return name; }
     public Long getOwnerId() { return ownerId; }
-    public Set<Long> getMemberIds() { return Set.copyOf(memberIds); }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
@@ -65,7 +54,6 @@ public class RoomJpaEntity {
                 this.id,
                 new RoomName(this.name),
                 this.ownerId,
-                this.memberIds,
                 this.createdAt,
                 this.updatedAt
         );
@@ -77,7 +65,6 @@ public class RoomJpaEntity {
                 room.getId(),
                 room.getName().value(),
                 room.getOwnerId(),
-                room.getMemberIds(),
                 room.getCreatedAt(),
                 room.getUpdatedAt()
         );

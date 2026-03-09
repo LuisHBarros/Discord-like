@@ -12,9 +12,6 @@ import java.util.Optional;
 @Repository
 public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, Long> {
 
-    @Query("SELECT DISTINCT r FROM RoomJpaEntity r JOIN r.memberIds m WHERE m = :memberId")
-    List<RoomJpaEntity> findByMemberId(@Param("memberId") Long memberId);
-    
     @Query("SELECT r FROM RoomJpaEntity r WHERE r.id = " +
             "(SELECT i.roomId FROM InviteJpaEntity i WHERE i.codeValue = :inviteCode)")
     Optional<RoomJpaEntity> findByInviteCode(@Param("inviteCode") String inviteCode);

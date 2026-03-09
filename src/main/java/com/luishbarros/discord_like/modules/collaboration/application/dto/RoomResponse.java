@@ -12,12 +12,12 @@ public record RoomResponse(
         Set<Long> memberIds,
         Instant createdAt
 ) {
-    public static RoomResponse fromRoom(Room room) {
+    public static RoomResponse fromRoom(Room room, Set<Long> memberIds) {
         return new RoomResponse(
                 room.getId(),
                 room.getName().value(),
                 room.getOwnerId(),
-                room.getMemberIds(),
+                memberIds,
                 room.getCreatedAt()
         );
     }

@@ -13,8 +13,6 @@ public interface RoomRepository {
 
     Optional<Room> findByInviteCode(String inviteCode);
 
-    List<Room> findByMemberId(Long memberId);
-
     void deleteById(Long id);
 
     boolean existsById(Long id);

@@ -12,8 +12,6 @@ public class RoomEncryptionState extends BaseEntity {
 
     private final Long roomId;
     private final EncryptionMode mode;
-    private final byte[] roomPublicKey;
-    private final byte[] encryptedRoomKey;
     private final Instant keyRotatedAt;
     private final Instant createdAt;
 
@@ -23,13 +21,10 @@ public class RoomEncryptionState extends BaseEntity {
     }
 
     private RoomEncryptionState(Long id, Long roomId, EncryptionMode mode,
-            byte[] roomPublicKey, byte[] encryptedRoomKey,
             Instant keyRotatedAt, Instant createdAt) {
         this.id = id;
         this.roomId = roomId;
         this.mode = mode;
-        this.roomPublicKey = roomPublicKey;
-        this.encryptedRoomKey = encryptedRoomKey;
         this.keyRotatedAt = keyRotatedAt;
         this.createdAt = createdAt;
     }
@@ -39,47 +34,34 @@ public class RoomEncryptionState extends BaseEntity {
                 null,
                 roomId,
                 EncryptionMode.LEGACY_AES_GCM,
-                null,
-                null,
                 Instant.now(),
                 Instant.now());
     }
 
-    public static RoomEncryptionState createE2EE(Long roomId, byte[] roomPublicKey,
-            byte[] encryptedRoomKey) {
-        if (roomPublicKey == null || roomPublicKey.length != 32) {
-            throw new InvalidRoomError("Invalid room public key");
-        }
+    public static RoomEncryptionState createE2EE(Long roomId) {
         return new RoomEncryptionState(
                 null,
                 roomId,
                 EncryptionMode.E2EE_SIGNAL_PROTOCOL,
-                roomPublicKey,
-                encryptedRoomKey,
                 Instant.now(),
                 Instant.now());
     }
 
-    public RoomEncryptionState rotateKey(byte[] newPublicKey, byte[] newEncryptedKey) {
+    public RoomEncryptionState rotateKey() {
         return new RoomEncryptionState(
                 this.id,
                 this.roomId,
                 this.mode,
-                newPublicKey,
-                newEncryptedKey,
                 Instant.now(),
                 this.createdAt);
     }
 
     public static RoomEncryptionState reconstitute(Long id, Long roomId, EncryptionMode mode,
-            byte[] roomPublicKey, byte[] encryptedRoomKey,
             Instant keyRotatedAt, Instant createdAt) {
         return new RoomEncryptionState(
                 id,
                 roomId,
                 mode,
-                roomPublicKey,
-                encryptedRoomKey,
                 keyRotatedAt,
                 createdAt);
     }
@@ -91,14 +73,6 @@ public class RoomEncryptionState extends BaseEntity {
 
     public EncryptionMode mode() {
         return mode;
-    }
-
-    public byte[] roomPublicKey() {
-        return roomPublicKey;
-    }
-
-    public byte[] encryptedRoomKey() {
-        return encryptedRoomKey;
     }
 
     public Instant keyRotatedAt() {

@@ -6,8 +6,10 @@ import com.luishbarros.discord_like.modules.collaboration.domain.error.RoomNotFo
 import com.luishbarros.discord_like.modules.collaboration.domain.error.UserNotInRoomError;
 import com.luishbarros.discord_like.modules.collaboration.domain.event.RoomEvents;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
+import com.luishbarros.discord_like.modules.collaboration.domain.model.RoomMembership;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.value_object.RoomName;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
+import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomMembershipRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.service.RoomMembershipValidator;
 import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import org.junit.jupiter.api.Nested;
@@ -21,7 +23,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.when;
 class RoomServiceTest {
 
     @Mock private RoomRepository roomRepository;
+    @Mock private RoomMembershipRepository roomMembershipRepository;
     @Mock private EventPublisher eventPublisher;
     @Mock private RoomMembershipValidator membershipValidator;
 
@@ -46,12 +48,8 @@ class RoomServiceTest {
     private static final Long    OTHER_ID  = 3L;
     private static final Instant NOW       = Instant.parse("2026-01-01T00:00:00Z");
 
-    private Room roomWith2Members() {
-        return Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, Set.of(OWNER_ID, MEMBER_ID), NOW, NOW);
-    }
-
     private Room roomWithOwnerOnly() {
-        return Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
+        return Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, NOW, NOW);
     }
 
     // ─── CreateRoom ───────────────────────────────────────────────────────────
@@ -62,7 +60,7 @@ class RoomServiceTest {
         @Test
         void savesRoomAndReturnsSavedInstanceWithId() {
             RoomName general = new RoomName("General");
-            Room savedRoom = Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
+            Room savedRoom = Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, NOW, NOW);
             when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
 
             Room result = roomService.createRoom("General", OWNER_ID, NOW);
@@ -71,15 +69,18 @@ class RoomServiceTest {
             verify(roomRepository).save(captor.capture());
             assertThat(captor.getValue().getName()).isEqualTo(general);
             assertThat(captor.getValue().getOwnerId()).isEqualTo(OWNER_ID);
-            assertThat(captor.getValue().getMemberIds()).containsExactly(OWNER_ID);
 
-            // garante que o room retornado é o que vem do repositório (com ID)
+            ArgumentCaptor<RoomMembership> membershipCaptor = ArgumentCaptor.forClass(RoomMembership.class);
+            verify(roomMembershipRepository).save(membershipCaptor.capture());
+            assertThat(membershipCaptor.getValue().getRoomId()).isEqualTo(ROOM_ID);
+            assertThat(membershipCaptor.getValue().getUserId()).isEqualTo(OWNER_ID);
+
             assertThat(result.getId()).isEqualTo(ROOM_ID);
         }
 
         @Test
         void publishesRoomCreatedEventWithSavedRoomId() {
-            Room savedRoom = Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
+            Room savedRoom = Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, NOW, NOW);
             when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
 
             roomService.createRoom("General", OWNER_ID, NOW);
@@ -87,21 +88,7 @@ class RoomServiceTest {
             ArgumentCaptor<RoomEvents> captor = ArgumentCaptor.forClass(RoomEvents.class);
             verify(eventPublisher).publish(captor.capture());
             assertThat(captor.getValue().type()).isEqualTo(RoomEvents.EventType.ROOM_CREATED);
-            // garante que o evento carrega o ID real, não null
             assertThat(captor.getValue().roomId()).isEqualTo(ROOM_ID);
-        }
-
-        @Test
-        void returnsCreatedRoomWithIdFromRepository() {
-            RoomName general = new RoomName("General");
-            Room savedRoom = Room.reconstitute(ROOM_ID, new RoomName("General"), OWNER_ID, Set.of(OWNER_ID), NOW, NOW);
-            when(roomRepository.save(any(Room.class))).thenReturn(savedRoom);
-
-            Room result = roomService.createRoom("General", OWNER_ID, NOW);
-
-            assertThat(result.getId()).isEqualTo(ROOM_ID);
-            assertThat(result.getName()).isEqualTo(general);
-            assertThat(result.getOwnerId()).isEqualTo(OWNER_ID);
         }
     }
 
@@ -112,7 +99,7 @@ class RoomServiceTest {
 
         @Test
         void delegatesToMembershipValidator() {
-            Room room = roomWith2Members();
+            Room room = roomWithOwnerOnly();
             when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(room);
 
             Room result = roomService.findById(ROOM_ID, MEMBER_ID);
@@ -137,12 +124,15 @@ class RoomServiceTest {
 
         @Test
         void returnsRoomsForMember() {
-            List<Room> rooms = List.of(roomWith2Members());
-            when(roomRepository.findByMemberId(OWNER_ID)).thenReturn(rooms);
+            Room room = roomWithOwnerOnly();
+            RoomMembership membership = RoomMembership.create(ROOM_ID, OWNER_ID, NOW);
+            
+            when(roomMembershipRepository.findByUserId(OWNER_ID)).thenReturn(List.of(membership));
+            when(roomRepository.findById(ROOM_ID)).thenReturn(Optional.of(room));
 
             List<Room> result = roomService.findByMemberId(OWNER_ID);
 
-            assertThat(result).isEqualTo(rooms);
+            assertThat(result).containsExactly(room);
         }
     }
 
@@ -154,7 +144,7 @@ class RoomServiceTest {
         @Test
         void givenOwner_savesNewNameAndPublishesEvent() {
             RoomName renamed = new RoomName("Renamed");
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWithOwnerOnly());
 
             Room result = roomService.updateRoomName(ROOM_ID, OWNER_ID, "Renamed", NOW);
 
@@ -167,7 +157,7 @@ class RoomServiceTest {
 
         @Test
         void givenNonOwner_throwsForbiddenError() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWithOwnerOnly());
 
             assertThatThrownBy(() -> roomService.updateRoomName(ROOM_ID, MEMBER_ID, "Renamed", NOW))
                     .isInstanceOf(ForbiddenError.class);
@@ -183,11 +173,13 @@ class RoomServiceTest {
 
         @Test
         void givenOwner_deletesAndPublishesEvent() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWithOwnerOnly());
 
             roomService.deleteRoom(ROOM_ID, OWNER_ID, NOW);
 
+            verify(roomMembershipRepository).deleteByRoomId(ROOM_ID);
             verify(roomRepository).deleteById(ROOM_ID);
+            
             ArgumentCaptor<RoomEvents> captor = ArgumentCaptor.forClass(RoomEvents.class);
             verify(eventPublisher).publish(captor.capture());
             assertThat(captor.getValue().type()).isEqualTo(RoomEvents.EventType.ROOM_DELETED);
@@ -195,7 +187,7 @@ class RoomServiceTest {
 
         @Test
         void givenNonOwner_throwsForbiddenError() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWithOwnerOnly());
 
             assertThatThrownBy(() -> roomService.deleteRoom(ROOM_ID, MEMBER_ID, NOW))
                     .isInstanceOf(ForbiddenError.class);
@@ -212,12 +204,13 @@ class RoomServiceTest {
         @Test
         void givenExistingRoom_addsMemberSavesAndPublishesEvent() {
             when(roomRepository.findById(ROOM_ID)).thenReturn(Optional.of(roomWithOwnerOnly()));
+            when(roomMembershipRepository.existsByRoomIdAndUserId(ROOM_ID, OTHER_ID)).thenReturn(false);
 
             roomService.addMember(ROOM_ID, OTHER_ID, NOW);
 
-            ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
-            verify(roomRepository).save(roomCaptor.capture());
-            assertThat(roomCaptor.getValue().getMemberIds()).contains(OTHER_ID);
+            ArgumentCaptor<RoomMembership> membershipCaptor = ArgumentCaptor.forClass(RoomMembership.class);
+            verify(roomMembershipRepository).save(membershipCaptor.capture());
+            assertThat(membershipCaptor.getValue().getUserId()).isEqualTo(OTHER_ID);
 
             ArgumentCaptor<RoomEvents> eventCaptor = ArgumentCaptor.forClass(RoomEvents.class);
             verify(eventPublisher).publish(eventCaptor.capture());
@@ -241,13 +234,11 @@ class RoomServiceTest {
 
         @Test
         void givenOwnerRemovesNonOwner_savesAndPublishesEvent() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWithOwnerOnly());
 
             roomService.removeMember(ROOM_ID, OWNER_ID, MEMBER_ID, NOW);
 
-            ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
-            verify(roomRepository).save(roomCaptor.capture());
-            assertThat(roomCaptor.getValue().getMemberIds()).doesNotContain(MEMBER_ID);
+            verify(roomMembershipRepository).deleteByRoomIdAndUserId(ROOM_ID, MEMBER_ID);
 
             ArgumentCaptor<RoomEvents> eventCaptor = ArgumentCaptor.forClass(RoomEvents.class);
             verify(eventPublisher).publish(eventCaptor.capture());
@@ -257,7 +248,7 @@ class RoomServiceTest {
 
         @Test
         void givenNonOwnerCaller_throwsForbiddenError() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWithOwnerOnly());
 
             assertThatThrownBy(() -> roomService.removeMember(ROOM_ID, MEMBER_ID, OTHER_ID, NOW))
                     .isInstanceOf(ForbiddenError.class);
@@ -265,7 +256,7 @@ class RoomServiceTest {
 
         @Test
         void givenOwnerTriesToRemoveOwner_throwsInvalidRoomError() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWithOwnerOnly());
 
             assertThatThrownBy(() -> roomService.removeMember(ROOM_ID, OWNER_ID, OWNER_ID, NOW))
                     .isInstanceOf(InvalidRoomError.class);
@@ -279,13 +270,11 @@ class RoomServiceTest {
 
         @Test
         void givenNonOwnerMember_removesAndPublishesEvent() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, MEMBER_ID)).thenReturn(roomWithOwnerOnly());
 
             roomService.leaveRoom(ROOM_ID, MEMBER_ID, NOW);
 
-            ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
-            verify(roomRepository).save(roomCaptor.capture());
-            assertThat(roomCaptor.getValue().getMemberIds()).doesNotContain(MEMBER_ID);
+            verify(roomMembershipRepository).deleteByRoomIdAndUserId(ROOM_ID, MEMBER_ID);
 
             ArgumentCaptor<RoomEvents> eventCaptor = ArgumentCaptor.forClass(RoomEvents.class);
             verify(eventPublisher).publish(eventCaptor.capture());
@@ -295,12 +284,12 @@ class RoomServiceTest {
 
         @Test
         void givenOwner_throwsInvalidRoomError() {
-            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWith2Members());
+            when(membershipValidator.validateAndGetRoom(ROOM_ID, OWNER_ID)).thenReturn(roomWithOwnerOnly());
 
             assertThatThrownBy(() -> roomService.leaveRoom(ROOM_ID, OWNER_ID, NOW))
                     .isInstanceOf(InvalidRoomError.class);
 
-            verify(roomRepository, never()).save(any());
+            verify(roomMembershipRepository, never()).deleteByRoomIdAndUserId(any(), any());
         }
     }
 }

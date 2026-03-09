@@ -5,12 +5,14 @@ import com.luishbarros.discord_like.modules.identity.application.dto.UserRespons
 import com.luishbarros.discord_like.modules.identity.application.service.UserService;
 import com.luishbarros.discord_like.modules.identity.infrastructure.security.AuthenticatedUser;
 import com.luishbarros.discord_like.shared.adapters.ratelimit.RateLimitedAuthService;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

@@ -8,9 +8,11 @@ import com.luishbarros.discord_like.modules.collaboration.domain.event.InviteEve
 import com.luishbarros.discord_like.modules.collaboration.domain.event.RoomEvents;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Invite;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
+import com.luishbarros.discord_like.modules.collaboration.domain.model.RoomMembership;
 import com.luishbarros.discord_like.shared.ports.EventPublisher;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.InviteRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomRepository;
+import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomMembershipRepository;
 import com.luishbarros.discord_like.modules.collaboration.domain.service.RoomMembershipValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ public class InviteService {
     private final InviteFactory inviteFactory;
     private final InviteRepository inviteRepository;
     private final RoomRepository roomRepository;
+    private final RoomMembershipRepository roomMembershipRepository;
     private final RoomMembershipValidator membershipValidator;
     private final EventPublisher eventPublisher;
 
@@ -31,12 +34,14 @@ public class InviteService {
             InviteFactory inviteFactory,
             InviteRepository inviteRepository,
             RoomRepository roomRepository,
+            RoomMembershipRepository roomMembershipRepository,
             RoomMembershipValidator membershipValidator,
             EventPublisher eventPublisher
     ) {
         this.inviteFactory = inviteFactory;
         this.inviteRepository = inviteRepository;
         this.roomRepository = roomRepository;
+        this.roomMembershipRepository = roomMembershipRepository;
         this.membershipValidator = membershipValidator;
         this.eventPublisher = eventPublisher;
     }
@@ -63,8 +68,10 @@ public class InviteService {
         Room room = roomRepository.findById(invite.getRoomId())
                 .orElseThrow(() -> new RoomNotFoundError(invite.getRoomId().toString()));
 
-        room.addMember(userId, now);
-        roomRepository.save(room);
+        if (!roomMembershipRepository.existsByRoomIdAndUserId(room.getId(), userId)) {
+            RoomMembership newMembership = RoomMembership.create(room.getId(), userId, now);
+            roomMembershipRepository.save(newMembership);
+        }
 
         eventPublisher.publish(RoomEvents.memberJoined(room.getId(), userId, now));
         eventPublisher.publish(InviteEvents.accepted(invite, userId));

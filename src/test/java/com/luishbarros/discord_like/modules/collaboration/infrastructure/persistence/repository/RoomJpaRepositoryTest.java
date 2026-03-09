@@ -1,14 +1,14 @@
 package com.luishbarros.discord_like.modules.collaboration.infrastructure.persistence.repository;
 
 import com.luishbarros.discord_like.modules.collaboration.infrastructure.persistence.entity.RoomJpaEntity;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,29 +22,22 @@ class RoomJpaRepositoryTest {
     @Autowired
     private RoomJpaRepository roomJpaRepository;
 
-    @Test
-    void findByMemberIdReturnsRoomsWhereMemberExists() {
-        Instant now = Instant.now();
-        RoomJpaEntity room1 = new RoomJpaEntity(null, "General", 10L, Set.of(1L, 2L), now, now);
-        RoomJpaEntity room2 = new RoomJpaEntity(null, "Backend", 11L, Set.of(3L, 4L), now, now);
-        RoomJpaEntity room3 = new RoomJpaEntity(null, "Frontend", 12L, Set.of(1L, 5L), now, now);
-        roomJpaRepository.saveAll(List.of(room1, room2, room3));
-
-        List<RoomJpaEntity> result = roomJpaRepository.findByMemberId(1L);
-
-        assertThat(result)
-                .extracting(RoomJpaEntity::getName)
-                .containsExactlyInAnyOrder("General", "Frontend");
+    @BeforeEach
+    void setUp() {
+        roomJpaRepository.deleteAll();
     }
 
     @Test
-    void findByMemberIdReturnsEmptyWhenMemberDoesNotExist() {
+    void savesAndRetrievesRoom() {
         Instant now = Instant.now();
-        RoomJpaEntity room = new RoomJpaEntity(null, "General", 10L, Set.of(2L, 3L), now, now);
-        roomJpaRepository.save(room);
-
-        List<RoomJpaEntity> result = roomJpaRepository.findByMemberId(99L);
-
-        assertThat(result).isEmpty();
+        RoomJpaEntity room = new RoomJpaEntity(null, "General", 10L, now, now);
+        
+        RoomJpaEntity saved = roomJpaRepository.save(room);
+        
+        Optional<RoomJpaEntity> retrieved = roomJpaRepository.findById(saved.getId());
+        
+        assertThat(retrieved).isPresent();
+        assertThat(retrieved.get().getName()).isEqualTo("General");
+        assertThat(retrieved.get().getOwnerId()).isEqualTo(10L);
     }
 }

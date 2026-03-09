@@ -16,10 +16,9 @@ import com.luishbarros.discord_like.modules.identity.domain.ports.repository.Use
 import com.luishbarros.discord_like.modules.presence.application.service.PresenceService;
 import com.luishbarros.discord_like.shared.adapters.http.HealthController;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -48,43 +47,44 @@ public class ControllerLayerIntegrationTest {
 	@Autowired
 	private MockMvc mockMvc;
 
-	@MockBean
+	@Mock
+
 	private RoomService roomService;
 
-	@MockBean
+	@Mock
 	private MessageService messageService;
 
-	@MockBean
+	@Mock
 	private InviteService inviteService;
 
-	@MockBean
+    @Mock
 	private E2EEKeyManagementService e2eeKeyManagementService;
 
-	@MockBean
+    @Mock
 	private AuthService authService;
 
-	@MockBean
+    @Mock
 	private UserService userService;
 
-	@MockBean
+    @Mock
 	private PresenceService presenceService;
 
-	@MockBean
+    @Mock
 	private TokenProvider tokenProvider;
 
-	@MockBean
+    @Mock
 	private PasswordHasher passwordHasher;
 
-	@MockBean
+    @Mock
 	private TokenBlacklist tokenBlacklist;
 
-	@MockBean
+    @Mock
 	private UserRepository userRepository;
 
-	@MockBean
+    @Mock
 	private Tracing tracing;
 
-	@MockBean
+    @Mock
 	private CurrentTraceContext currentTraceContext;
 
 	@Test
