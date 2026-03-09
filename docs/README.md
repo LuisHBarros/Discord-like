@@ -61,7 +61,7 @@ Discord-like is a real-time communication platform built with Spring Boot 4.0.2 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                           Interfaces Layer                           │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │  Controllers │  │   WebSocket  │  │  Event List.  │              │
+│  │  Controllers │  │   WebSocket  │  │  Event List. │              │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
 └─────────┼────────────────┼────────────────┼─────────────────────────┘
           │                │                │

@@ -2,7 +2,6 @@ package com.luishbarros.discord_like;
 
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
-import brave.propagation.TraceContext;
 import com.luishbarros.discord_like.modules.collaboration.application.service.E2EEKeyManagementService;
 import com.luishbarros.discord_like.modules.collaboration.application.service.InviteService;
 import com.luishbarros.discord_like.modules.collaboration.application.service.MessageService;
@@ -42,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
 	"spring.autoconfigure.exclude=org.springframework.boot.testcontainers.service.connection.ServiceConnectionAutoConfiguration"
 })
-public class ControllerLayerIntegrationTest {
+class ControllerLayerIntegrationTest {
 
 	@Autowired
 	private MockMvc mockMvc;
