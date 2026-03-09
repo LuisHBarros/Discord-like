@@ -1,128 +1,227 @@
-# Discord-like Architecture Documentation
+# Discord-Like
 
-This directory contains comprehensive documentation about the architecture and design of the Discord-like application.
+![CI](https://github.com/LuisHBarros/discord-like/actions/workflows/ci.yml/badge.svg)
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Project Overview
+A real-time chat platform built as a backend portfolio project, focused on clean architecture, Domain-Driven Design, and production-grade engineering practices.
 
-Discord-like is a real-time communication platform built with Spring Boot 4.0.2 and Java 21. The application follows **Hexagonal Architecture (Ports & Adapters)** with **Domain-Driven Design (DDD)** principles, organized into feature-based modules.
+---
 
-### Key Technologies
+## Overview
 
-- **Spring Boot 4.0.2** - Application framework
-- **PostgreSQL** - Primary database
-- **Redis** - Caching, presence store, rate limiting
-- **Kafka** - Domain event bus
-- **WebSocket** - Real-time messaging
-- **JWT** - Authentication
-- **Argon2id** - Password hashing
-- **AES-GCM** - Message encryption
+The project implements the core features of a communication platform — rooms, real-time messaging, end-to-end encryption, and user presence — as a domain for demonstrating concrete architectural decisions.
 
-### Architecture Highlights
+The choice of a **modular monolith** over microservices was deliberate: the domain does not justify the operational complexity of distributed services, and hexagonal architecture ensures bounded contexts remain decoupled and independently migratable in the future.
 
-- **Hexagonal Architecture** - Clean separation of concerns
-- **Domain-Driven Design** - Rich domain models with business logic
-- **Event-Driven** - Asynchronous communication via Kafka
-- **Feature-Based Modules** - Identity, Collaboration, Presence bounded contexts
-- **Repository Pattern** - Abstract data access
-- **Value Objects** - Immutable domain concepts
-- **Aggregates** - Transaction boundaries with invariants
-- **Domain Events** - Loose coupling between contexts
+---
 
-## Documentation Structure
-
-### Architecture
-
-- [01-overview.md](./architecture/01-overview.md) - High-level architecture, technology stack, deployment view
-- [02-hexagonal-architecture.md](./architecture/02-hexagonal-architecture.md) - Hexagonal/Ports & Adapters pattern
-- [03-bounded-contexts.md](./architecture/03-bounded-contexts.md) - Bounded contexts and context mapping
-- [04-aggregates.md](./architecture/04-aggregates.md) - Domain aggregates and invariants
-- [05-value-objects.md](./architecture/05-value-objects.md) - Value objects and immutability
-- [06-domain-events.md](./architecture/06-domain-events.md) - Domain events and event sourcing
-- [07-repositories.md](./architecture/07-repositories.md) - Repository pattern and data access
-- [08-application-services.md](./architecture/08-application-services.md) - Application services and use cases
-- [09-infrastructure-adapters.md](./architecture/09-infrastructure-adapters.md) - Infrastructure layer implementation
-- [10-design-patterns.md](./architecture/10-design-patterns.md) - Design patterns used
-
-### Development
-
-- [01-project-structure.md](./development/01-project-structure.md) - Project structure guide
-- [02-testing.md](./development/02-testing.md) - Testing approach and coverage
-
-### Deployment
-
-- [README.md](./deployment/README.md) - Deployment overview and quick start
-- [01-docker.md](./deployment/01-docker.md) - Docker deployment guide
-- [03-production.md](./deployment/03-production.md) - Production configuration and security
-- [04-monitoring.md](./deployment/04-monitoring.md) - Prometheus and Grafana monitoring setup
-
-## High-Level Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                           Interfaces Layer                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
-│  │  Controllers │  │   WebSocket  │  │  Event List. │               │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘               │
-└─────────┼────────────────┼────────────────┼─────────────────────────┘
-          │                │                │
-┌─────────┼────────────────┼────────────────┼─────────────────────────┐
-│         ▼                ▼                ▼                         │
-│                    Application Layer                                │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │           Application Services (Use Cases)                  │    │
-│  └────────────────────────┬────────────────────────────────────┘    │
-└───────────────────────────┼─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                   Interfaces Layer                  │
+│         Controllers │ WebSocket │ Event Listeners   │
+└───────────────────────────┬─────────────────────────┘
                             │
-┌───────────────────────────┼─────────────────────────────────────────┐
-│                           ▼                                         │
-│                        Domain Layer                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
-│  │   Entities   │  │ Value Objects│  │  Aggregates  │               │
-│  └──────────────┘  └──────────────┘  └──────────────┘               │
-│  ┌──────────────┐  ┌──────────────┐                                 │
-│  │ Domain Svc.  │  │  Domain Evts │                                 │
-│  └──────────────┘  └──────────────┘                                 │
-└───────────────────────────┼─────────────────────────────────────────┘
+┌───────────────────────────▼─────────────────────────┐
+│                  Application Layer                  │
+│            Application Services (Use Cases)         │
+└───────────────────────────┬─────────────────────────┘
                             │
-┌───────────────────────────┼─────────────────────────────────────────┐
-│                           ▼                                         │
-│                      Infrastructure Layer                           │
-│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────┐           │
-│  │   JPA/Hibernate  │  │ Kafka/Redis  │  │   WebSocket  │           │
-│  └──────────────────┘  └──────────────┘  └──────────────┘           │
-└─────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────▼─────────────────────────┐
+│                    Domain Layer                     │
+│    Entities │ Value Objects │ Aggregates │ Events   │
+└───────────────────────────┬─────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────┐
+│                Infrastructure Layer                 │
+│         JPA/Hibernate │ Kafka/Redis │ WebSocket     │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Module Structure
+### Bounded Contexts
+
+| Context | Responsibility |
+|---|---|
+| **Identity** | Registration, JWT authentication, user management |
+| **Collaboration** | Rooms, messages, invites, E2EE encryption |
+| **Presence** | Online/offline status, last seen, state transitions |
+
+Each context has its own isolated domain layer. Cross-context communication happens exclusively through domain events published to Kafka — no context imports domain classes from another.
+
+### Design Decisions
+
+**Why Hexagonal Architecture?**
+The domain has no knowledge of Spring, JPA, or Kafka. Ports are pure interfaces inside `domain/ports`. This allows testing all business logic with mocks, without loading a Spring context.
+
+**Why Kafka inside a monolith?**
+Decoupling between contexts has value even within a single process. A `MessageService` that publishes `MessageEvents` does not know whether the consumer will update presence, send a push notification, or deliver via WebSocket. Kafka makes that contract explicit and makes a future migration to microservices straightforward.
+
+**Why `reconstitute()` on aggregates?**
+Construction and reconstitution are distinct operations. `new Room(name, ownerId)` enforces creation invariants. `Room.reconstitute(id, name, ownerId, ...)` restores persisted state without revalidating. The distinction is applied consistently across all aggregates in the project.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | Java 21, Spring Boot 3 |
+| Database | PostgreSQL 15 + JPA/Hibernate |
+| Cache | Redis 7 (`@Cacheable`, presence store, token blacklist) |
+| Messaging | Apache Kafka (domain events, WebSocket distribution) |
+| Real-time | WebSocket (Spring WebSocket) |
+| Security | JWT (access + refresh), Argon2id, AES-256-GCM, ECDH |
+| Observability | Prometheus (metrics), Zipkin (distributed tracing) |
+| Testing | JUnit 5, Mockito, Testcontainers |
+| CI/CD | GitHub Actions |
+| Containerization | Docker, Docker Compose |
+
+---
+
+## Message Flow
+
+```
+POST /rooms/{id}/messages
+        │
+        ▼
+MessageService.createMessage()
+        │  encrypt(plaintext) → AES-256-GCM
+        │  messageRepository.save()
+        │
+        ▼
+eventPublisher.publish(MessageEvents.sent(...))
+        │
+        ▼
+KafkaEventPublisher → topic "message-events"
+        │
+        ▼
+MessageEventListener → KafkaBroadcaster
+        │
+        ▼
+WebSocketDistributionEventListener
+        │
+        ▼
+sessionManager.broadcastToRoom() → WebSocket
+```
+
+`EventPublisher` is a shared kernel interface — the domain has no knowledge that Kafka exists. The implementation can be swapped without touching any application service.
+
+---
+
+## Security
+
+- **Passwords**: Argon2id with random salt
+- **Tokens**: JWT with access token (15min) + refresh token (7d) + Redis blacklist
+- **Messages**: AES-256-GCM with a random 12-byte IV per message
+- **E2EE**: ECDH for key exchange + HKDF-SHA256 for key derivation + AES-256-GCM for encryption
+- **Rate limiting**: `RateLimitedAuthService` decorator with Redis-backed counters
+- **WebSocket**: `userId` extracted from the authenticated JWT session — never accepted as client input
+
+---
+
+## Testing
+
+```
+Layer                   Approach
+──────────────────────────────────────────────────────
+Domain models           Pure unit tests (no Spring)
+Application services    Unit tests with Mockito (@Mock on ports)
+Infrastructure adapters Integration tests with Testcontainers
+WebSocket               Unit tests with session mocks
+Middleware              Standalone MockMvc (isolated @WebMvcTest)
+```
+
+**145 tests** run in CI without additional infrastructure (PostgreSQL and Redis as GitHub Actions services, Kafka excluded via `ci` profile).
+
+Tests requiring a full Spring context (Kafka, Testcontainers) are tagged with `@Tag("integration")` and run locally via `docker-compose`.
+
+```bash
+# Run unit tests (no infrastructure required)
+./gradlew test -PexcludeTags="integration"
+
+# Run all tests (requires docker-compose up)
+./gradlew test
+```
+
+---
+
+## Running Locally
+
+### Prerequisites
+
+- Java 21
+- Docker and Docker Compose
+
+### Starting the application
+
+```bash
+# Clone the repository
+git clone https://github.com/LuisHBarros/discord-like.git
+cd discord-like
+
+# Start infrastructure services
+docker-compose up -d
+
+# Run the application
+./gradlew bootRun
+```
+
+The API will be available at `http://localhost:8000`.
+Swagger UI: `http://localhost:8000/swagger-ui.html`
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `REDIS_HOST` | `localhost` | Redis host |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka bootstrap servers |
+| `JWT_ACCESS_SECRET` | — | JWT signing key (≥256 bits) |
+| `JWT_REFRESH_SECRET` | — | JWT refresh signing key (≥256 bits) |
+| `ENCRYPTION_SECRET` | — | AES-256 key in base64 (32 bytes) |
+
+---
+
+## Project Structure
 
 ```
 src/main/java/com/luishbarros/discord_like/
 ├── modules/
-│   ├── identity/          # Identity & Authentication bounded context
+│   ├── identity/           # Authentication and user management
+│   │   ├── application/    # DTOs and application services
+│   │   ├── domain/         # Entities, value objects, ports, errors
+│   │   └── infrastructure/ # JPA, JWT, Argon2, controllers
+│   ├── collaboration/      # Rooms, messages, invites
 │   │   ├── application/
 │   │   ├── domain/
-│   │   └── infrastructure/
-│   ├── collaboration/     # Chat & Rooms bounded context
-│   │   ├── application/
-│   │   ├── domain/
-│   │   └── infrastructure/
-│   └── presence/          # User presence bounded context
+│   │   └── infrastructure/ # JPA, Kafka, WebSocket, controllers
+│   └── presence/           # User presence
 │       ├── application/
 │       ├── domain/
-│       └── infrastructure/
-└── shared/               # Shared kernel
-    ├── adapters/        # Infrastructure adapters
-    ├── domain/          # Shared domain concepts
-    └── ports/           # Cross-cutting ports
+│       └── infrastructure/ # Redis, controllers
+└── shared/                 # Shared kernel
+    ├── adapters/           # Kafka, Redis, Prometheus, CORS
+    ├── domain/             # BaseEntity, DomainEvent, DomainError
+    └── ports/              # EventPublisher, Broadcaster, RateLimiter
 ```
 
-## Getting Started
+---
 
-For build commands and configuration details, see the project's [CLAUDE.md](../CLAUDE.md).
+## Architecture Documentation
 
-## Quick Links
+Detailed documentation available in [`docs/`](./):
 
-- **Architecture**: Start with [Overview](./architecture/01-overview.md)
-- **Domain Model**: Learn about [Aggregates](./architecture/04-aggregates.md) and [Value Objects](./architecture/05-value-objects.md)
-- **Event System**: Understand [Domain Events](./architecture/06-domain-events.md)
-- **Development**: See [Project Structure](./development/01-project-structure.md)
+- [Overview](./architecture/01-overview.md)
+- [Hexagonal Architecture](./architecture/02-hexagonal-architecture.md)
+- [Bounded Contexts](./architecture/03-bounded-contexts.md)
+- [Aggregates and Invariants](./architecture/04-aggregates.md)
+- [Value Objects](./architecture/05-value-objects.md)
+- [Domain Events](./architecture/06-domain-events.md)
+- [Deployment Guide](./deployment/README.md)
+- [Monitoring Setup](./deployment/04-monitoring.md)
+- [CI/CD Setup](./deployment/CI_SETUP.md)
+
+---
