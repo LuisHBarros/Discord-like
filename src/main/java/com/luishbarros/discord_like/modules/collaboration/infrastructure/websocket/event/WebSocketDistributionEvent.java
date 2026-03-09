@@ -27,4 +27,12 @@ public record WebSocketDistributionEvent(
     public static WebSocketDistributionEvent chatMessage(Long roomId, Long senderId, String content, Instant createdAt) {
         return new WebSocketDistributionEvent(null, roomId, senderId, content, createdAt, MessageType.CHAT_MESSAGE);
     }
+
+    public static WebSocketDistributionEvent roomJoin(Long roomId, Long userId) {
+        return new WebSocketDistributionEvent(null, roomId, userId, null, Instant.now(), MessageType.ROOM_JOIN);
+    }
+
+    public static WebSocketDistributionEvent roomLeave(Long roomId, Long userId) {
+        return new WebSocketDistributionEvent(null, roomId, userId, null, Instant.now(), MessageType.ROOM_LEAVE);
+    }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.WebSocketSessionManager;
 import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.OutgoingMessage;
+import com.luishbarros.discord_like.modules.collaboration.infrastructure.websocket.dto.RoomPresenceMessage;
 import com.luishbarros.discord_like.shared.ports.EventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,12 +56,34 @@ public class WebSocketDistributionEventListener implements EventListener<WebSock
     }
 
     private void deliverRoomJoin(WebSocketDistributionEvent event) {
-        // Future: Handle room join broadcasts
-        log.debug("Room join event received: roomId={}, senderId={}", event.roomId(), event.senderId());
+        try {
+            RoomPresenceMessage payload = RoomPresenceMessage.joined(
+                event.roomId(),
+                event.senderId(),
+                event.createdAt()
+            );
+            String json = objectMapper.writeValueAsString(payload);
+            sessionManager.broadcastToRoom(event.roomId().toString(), json);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize WebSocketDistributionEvent for room join", e);
+        } catch (IOException e) {
+            log.error("Failed to broadcast room join event to WebSocket sessions", e);
+        }
     }
 
     private void deliverRoomLeave(WebSocketDistributionEvent event) {
-        // Future: Handle room leave broadcasts
-        log.debug("Room leave event received: roomId={}, senderId={}", event.roomId(), event.senderId());
+        try {
+            RoomPresenceMessage payload = RoomPresenceMessage.left(
+                event.roomId(),
+                event.senderId(),
+                event.createdAt()
+            );
+            String json = objectMapper.writeValueAsString(payload);
+            sessionManager.broadcastToRoom(event.roomId().toString(), json);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize WebSocketDistributionEvent for room leave", e);
+        } catch (IOException e) {
+            log.error("Failed to broadcast room leave event to WebSocket sessions", e);
+        }
     }
 }

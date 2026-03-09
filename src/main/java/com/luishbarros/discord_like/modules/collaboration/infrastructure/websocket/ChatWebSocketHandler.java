@@ -101,13 +101,31 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleJoinRoom(WebSocketSession session, Long roomId) throws IOException {
+        Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
+
         sessionManager.joinRoom(roomId.toString(), session);
         sendConnectMessage(session, "Joined room: " + roomId);
+
+        // Publish WebSocket distribution event for cross-node broadcasting
+        WebSocketDistributionEvent distributionEvent = WebSocketDistributionEvent.roomJoin(
+            roomId,
+            userId
+        );
+        eventPublisher.publish(distributionEvent);
     }
 
     private void handleLeaveRoom(WebSocketSession session, Long roomId) throws IOException {
+        Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
+
         sessionManager.leaveRoom(roomId.toString(), session);
         sendConnectMessage(session, "Left room: " + roomId);
+
+        // Publish WebSocket distribution event for cross-node broadcasting
+        WebSocketDistributionEvent distributionEvent = WebSocketDistributionEvent.roomLeave(
+            roomId,
+            userId
+        );
+        eventPublisher.publish(distributionEvent);
     }
 
     private void sendError(WebSocketSession session, String code) throws IOException {
