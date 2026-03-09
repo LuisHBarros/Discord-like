@@ -2,6 +2,7 @@ package com.luishbarros.discord_like.shared.adapters.cache;
 
 import com.luishbarros.discord_like.BaseIntegrationTest;
 import com.luishbarros.discord_like.modules.collaboration.application.service.RoomService;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for cross-instance cache invalidation.
  * These tests use Testcontainers to provide PostgreSQL database.
  */
+@Tag("integration")
 @SpringBootTest
 public class CacheInvalidationIntegrationTest extends BaseIntegrationTest {
 

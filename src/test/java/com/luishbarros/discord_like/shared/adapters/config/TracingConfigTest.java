@@ -1,6 +1,7 @@
 package com.luishbarros.discord_like.shared.adapters.config;
 
 import brave.Tracing;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test configuration for distributed tracing.
  * This test uses Testcontainers to provide PostgreSQL database.
  */
+@Tag("integration")
 @SpringBootTest
 public class TracingConfigTest extends BaseIntegrationTest {
 

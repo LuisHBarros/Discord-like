@@ -1,0 +1,37 @@
+# name: CD
+#
+# on:
+#   push:
+#     branches: [ main ]
+#
+# jobs:
+#   build-image:
+#     runs-on: ubuntu-latest
+#
+#     steps:
+#       - uses: actions/checkout@v4
+#
+#       # Uncomment the following steps to enable Docker Hub publishing
+#       # First, add these secrets in GitHub repository settings:
+#       # - DOCKERHUB_USERNAME: Your Docker Hub username
+#       # - DOCKERHUB_TOKEN: Access token from Docker Hub account settings
+#
+#       # - name: Log in to Docker Hub
+#       #   uses: docker/login-action@v3
+#       #   with:
+#       #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+#       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#       # - name: Build and push Docker image
+#       #   uses: docker/build-push-action@v5
+#       #   with:
+#       #     context: .
+#       #     push: true
+#       #     tags: |
+#       #       luishbarros/discord-like:latest
+#       #       luishbarros/discord-like:${{ github.sha }}
+#
+#       # For now, just build the image without pushing
+#       # Remove this step when enabling Docker Hub publishing
+#       # - name: Build Docker image (no push)
+#       #   run: docker build -t discord-like:latest .

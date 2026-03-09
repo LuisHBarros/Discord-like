@@ -2,6 +2,7 @@ package com.luishbarros.discord_like.modules.collaboration.application.service;
 
 import com.luishbarros.discord_like.BaseIntegrationTest;
 import com.luishbarros.discord_like.modules.collaboration.domain.model.Room;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for Room Service cache functionality.
  * These tests use Testcontainers to provide PostgreSQL database.
  */
+@Tag("integration")
 @SpringBootTest
 public class RoomServiceCacheTest extends BaseIntegrationTest {
 

@@ -5,6 +5,7 @@ import com.luishbarros.discord_like.modules.collaboration.domain.model.RoomEncry
 import com.luishbarros.discord_like.modules.collaboration.domain.model.RoomMembership;
 import com.luishbarros.discord_like.modules.collaboration.domain.ports.repository.RoomMembershipRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +16,7 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Tag("integration")
 @SpringBootTest
 @Transactional
 public class E2EEKeyManagementServiceTest extends BaseIntegrationTest {
